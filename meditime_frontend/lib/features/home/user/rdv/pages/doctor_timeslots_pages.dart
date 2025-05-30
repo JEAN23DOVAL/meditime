@@ -24,7 +24,7 @@ class DoctorTimeslotsPage extends ConsumerWidget {
       );
     }
 
-    final timeslotsAsync = ref.watch(activeDoctorTimeslotsProvider(doctorId));
+    final slotsAsync = ref.watch(activeDoctorTimeslotsProvider(doctorId));
 
     return Scaffold(
       appBar: AppBar(
@@ -34,7 +34,7 @@ class DoctorTimeslotsPage extends ConsumerWidget {
           onPressed: () => context.go(AppRoutes.homeUser),
         ),
       ),
-      body: timeslotsAsync.when(
+      body: slotsAsync.when(
         data: (slots) => slots.isEmpty
             ? const Center(child: Text('Aucun créneau actif'))
             : ListView.builder(

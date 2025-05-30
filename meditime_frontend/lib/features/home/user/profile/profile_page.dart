@@ -9,6 +9,7 @@ import 'package:meditime_frontend/features/home/user/profile/widgets/profile_sec
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
 import 'package:meditime_frontend/configs/app_colors.dart';
 import 'package:meditime_frontend/services/logout_service.dart';
+import 'package:meditime_frontend/features/home/user/doctors/extra_info_form.dart';
 
 class ProfilPage extends ConsumerWidget {
   const ProfilPage({super.key});
@@ -88,6 +89,20 @@ class ProfilPage extends ConsumerWidget {
                 subtitle: 'Gérez vos disponibilités',
                 onTap: () {
                   context.go(AppRoutes.creneaudoctor);
+                },
+              ),
+            if (user?.role == 'doctor')
+              ProfileOptionTile(
+                icon: Icons.edit_note,
+                subtitle: 'Ajoutez vos informations',
+                // icon: Icons.edit_note,
+                title: 'Compléter mes informations',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ExtraInfoFormPage(doctorId: user!.doctorId!), // ou idUser selon ton modèle
+                    ),
+                  );
                 },
               ),
             ProfileOptionTile(

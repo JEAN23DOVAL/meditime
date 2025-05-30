@@ -5,8 +5,11 @@ import 'package:meditime_frontend/features/home/admin/admin_dashboard_screen.dar
 import 'package:meditime_frontend/features/home/admin/medecin/medecin_list_screen.dart';
 import 'package:meditime_frontend/features/home/user/accueil/widgets/confirmer_compte.dart';
 import 'package:meditime_frontend/features/home/user/accueil/widgets/devenir_medecin/devenir_medecin_screen.dart';
+import 'package:meditime_frontend/features/home/user/doctors/doctors_page.dart';
+import 'package:meditime_frontend/features/home/user/doctors/pages/doctor_details.dart';
 import 'package:meditime_frontend/features/home/user/home_users.dart';
 import 'package:meditime_frontend/features/home/user/rdv/pages/doctor_timeslots_pages.dart';
+import 'package:meditime_frontend/features/home/user/rdv/rdv_page.dart';
 
 import 'package:meditime_frontend/features/splash/splash_screen.dart';
 import 'package:meditime_frontend/features/onboarding/onboarding_1_screen.dart';
@@ -175,12 +178,35 @@ final routerProvider = Provider<GoRouter>((ref) {
           key: state.pageKey,
         ),
       ),
+      
       GoRoute(
         path: AppRoutes.creneaudoctor,
         pageBuilder: (context, state) => buildFadeTransitionPage(
           child: const DoctorTimeslotsPage(),
           key: state.pageKey,
         ),
+      ),
+      // ROUTE DETAIL MEDECIN AVEC PARAMETRE
+      GoRoute(
+        path: '${AppRoutes.doctorDetail}/:idUser',
+        pageBuilder: (context, state) {
+          final idUser = int.parse(state.pathParameters['idUser']!);
+          return buildFadeTransitionPage(
+            child: DoctorDetailPages(idUser: idUser),
+            key: state.pageKey,
+        );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.rdvPage,
+        pageBuilder: (context, state) => buildFadeTransitionPage(
+          child: RdvPage(), // ou détecte le rôle si besoin
+          key: state.pageKey,
+        ),
+      ),
+      GoRoute(
+        path: '/doctors/nearby',
+        builder: (context, state) => const DoctorPage(),
       ),
     ],
   );

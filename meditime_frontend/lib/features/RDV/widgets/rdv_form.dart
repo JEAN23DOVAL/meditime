@@ -13,6 +13,7 @@ class _RdvFormState extends State<RdvForm> {
   final _formKey = GlobalKey<FormState>();
   String? motif;
   String? doctorId;
+  String? doctorName; // Ajoute cette variable dans _RdvFormState
   DateTime? timeslot;
 
   @override
@@ -28,11 +29,35 @@ class _RdvFormState extends State<RdvForm> {
             validator: (v) => v == null || v.isEmpty ? 'Champ obligatoire' : null,
           ),
           const SizedBox(height: 16),
-          RdvDoctorPicker(
-            onDoctorSelected: (id) => doctorId = id,
+          Text("Médecin sélectionné :", style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.person_search),
+            label: Text(doctorName ?? "Choisir un médecin"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              // Navigue vers la page des médecins proches et attends le résultat
+              final result = await Navigator.pushNamed(
+                context,
+                '/doctors/nearby', // adapte selon ta route
+                arguments: {'excludeDoctorId': doctorId},
+              );
+              if (result != null && result is Map) {
+                setState(() {
+                  doctorId = result['doctorId'] as String;
+                  doctorName = result['doctorName'] as String;
+                });
+              }
+            },
           ),
           const SizedBox(height: 16),
           RdvTimeslotPicker(
+            doctorId: doctorId,
             onTimeslotSelected: (date) => timeslot = date,
           ),
           const SizedBox(height: 24),

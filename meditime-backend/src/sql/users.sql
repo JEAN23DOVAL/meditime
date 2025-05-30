@@ -91,4 +91,20 @@ CREATE TABLE doctor_slots (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY unique_doctor_slot (doctorId, startDay, startHour, startMinute, endDay, endHour, endMinute),
   FOREIGN KEY (doctorId) REFERENCES doctor(id) ON DELETE CASCADE
-);*/
+); 
+-- Création de la table rdv pour les rendez-vous
+CREATE TABLE rdv (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  patient_id INT NOT NULL,
+  doctor_id INT NOT NULL,
+  specialty VARCHAR(100) NOT NULL,
+  date DATETIME NOT NULL,
+  status ENUM('pending', 'upcoming', 'completed', 'cancelled', 'no_show', 'doctor_no_show', 'expired') NOT NULL DEFAULT 'pending',
+  motif VARCHAR(255),
+  duration_minutes INT NOT NULL DEFAULT 60,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (patient_id) REFERENCES users(idUser),
+  FOREIGN KEY (doctor_id) REFERENCES users(idUser)
+);
+*/

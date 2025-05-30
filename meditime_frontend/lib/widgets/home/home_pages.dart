@@ -11,7 +11,7 @@ import 'package:meditime_frontend/features/home/pages/messages_page.dart';*/
 List<Widget> buildHomePages({required bool isDoctor}) => [
   const HomePage(),
   DoctorPage(),
-  RdvPage(isDoctor: isDoctor),
+  RdvPage(),
   const MessagesPage(),
   const ProfilPage(), 
 ];

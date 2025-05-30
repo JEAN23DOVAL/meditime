@@ -31,6 +31,8 @@ const doctorSlotRoutes = require('./rdv/routes/doctorSlot.routes');
 app.use('/api/rdv/slots', doctorSlotRoutes);
 const doctorRoutes = require('./routes/doctor.routes');
 app.use('/api/doctor', doctorRoutes);
+const rdvRoutes = require('./routes/rdv.routes');
+app.use('/api/rdv', rdvRoutes);
 
 // 🧱 Middleware global de gestion d'erreurs
 app.use((err, req, res, next) => {

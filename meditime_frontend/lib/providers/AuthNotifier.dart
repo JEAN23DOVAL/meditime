@@ -50,7 +50,6 @@ class AuthNotifier extends StateNotifier<User?> {
 
   Future<String?> getToken() async {
     final token = await LocalStorageService.getToken();
-    print('getToken() retourne : $token');
     return token;
   }
 

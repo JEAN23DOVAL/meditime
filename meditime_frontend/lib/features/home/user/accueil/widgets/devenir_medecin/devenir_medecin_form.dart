@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -76,6 +78,7 @@ class DevenirMedecinFormState extends ConsumerState<DevenirMedecinForm> {
     setState(() => _isLoading = false);
   }
 
+  @override
   void dispose() {
     _specialiteController.dispose();
     _diplomesController.dispose();

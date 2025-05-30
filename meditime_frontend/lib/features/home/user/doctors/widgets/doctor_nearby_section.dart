@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:meditime_frontend/configs/app_routes.dart';
 import 'package:meditime_frontend/providers/doctor_nearby_provider.dart';
 import 'doctor_nearby_card.dart';
 
@@ -19,7 +21,10 @@ class DoctorNearbySection extends ConsumerWidget {
           itemBuilder: (context, index) => DoctorNearbyCard(
             doctor: doctors[index],
             onBook: () {
-              // Navigue vers la page de prise de RDV ou affiche un dialog
+              // Action pour réserver un rendez-vous
+            },
+            onTap: () {
+              context.push('${AppRoutes.doctorDetail}/${doctors[index].idUser}');
             },
           ),
         ),

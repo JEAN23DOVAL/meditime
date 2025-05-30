@@ -5,6 +5,7 @@ const app = require('./src/app');
 const bcrypt = require('bcrypt');
 const cron = require('node-cron');
 const expireOldSlots = require('./src/rdv/cron/expireDoctorSlots');
+const expireOldRdvs = require('./src/rdv/cron/expireRdv');
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ const startServer = async () => {
     // Lancer le cron toutes les 5 minutes
     cron.schedule('*/5 * * * *', async () => {
       await expireOldSlots();
+      await expireOldRdvs(); // Ajoute cette ligne
     });
 
     const PORT = process.env.PORT || 3000;

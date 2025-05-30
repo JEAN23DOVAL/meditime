@@ -12,6 +12,12 @@ class Doctor {
   final DateTime createdAt;
   final User? user;
 
+  // Nouveaux champs
+  final int? patientsExamined;
+  final int? experienceYears;
+  final int? pricePerHour;
+  final String? description;
+
   Doctor({
     required this.id,
     required this.idUser,
@@ -23,6 +29,10 @@ class Doctor {
     required this.note,
     required this.createdAt,
     this.user,
+    this.patientsExamined,
+    this.experienceYears,
+    this.pricePerHour,
+    this.description,
   });
 
   factory Doctor.fromJson(Map<String, dynamic> json) {
@@ -37,6 +47,10 @@ class Doctor {
       note: (json['note'] as num?)?.toDouble() ?? 0,
       createdAt: DateTime.parse(json['created_at']),
       user: json['user'] != null ? User.fromMap(json['user']) : null,
+      patientsExamined: json['patientsExamined'],
+      experienceYears: json['experienceYears'],
+      pricePerHour: json['pricePerHour'],
+      description: json['description'],
     );
   }
 
@@ -51,6 +65,11 @@ class Doctor {
       'adresse_consultation': adresseConsultation,
       'note': note,
       'created_at': createdAt.toIso8601String(),
+      'patientsExamined': patientsExamined,
+      'experienceYears': experienceYears,
+      'pricePerHour': pricePerHour,
+      'description': description,
+      'user': user?.toMap(),
     };
   }
 }

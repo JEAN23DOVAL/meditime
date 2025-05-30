@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+/* import 'package:flutter/material.dart';
 import '../widgets/rdv_summary_card.dart';
 import '../widgets/rdv_payment_method.dart';
 
@@ -18,4 +18,4 @@ class RdvPaymentPage extends StatelessWidget {
       ),
     );
   }
-}
+} */

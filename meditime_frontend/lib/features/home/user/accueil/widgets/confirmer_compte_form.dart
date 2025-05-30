@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meditime_frontend/configs/app_routes.dart';
+import 'package:meditime_frontend/models/user_model.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
 import 'package:meditime_frontend/widgets/formulaires/custom_text_field.dart';
 import 'package:meditime_frontend/widgets/formulaires/validators.dart';
@@ -93,7 +94,7 @@ class ConfirmerCompteFormState extends ConsumerState<ConfirmerCompteForm> {
           if (result['token'] != null) {
             await ref.read(authProvider.notifier).saveToken(result['token']);
           }
-          ref.read(authProvider.notifier).updateUser(result['user']);
+          ref.read(authProvider.notifier).updateUser(User.fromMap(result['user']));
           ref.read(routerProvider).go(AppRoutes.homeUser);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(

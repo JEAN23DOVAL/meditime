@@ -62,13 +62,16 @@ const getDoctorsByProximity = async (req, res) => {
     // On récupère la ville de l'utilisateur connecté depuis le token (injecté par authMiddleware)
     const userCity = req.user.city;
 
-    // 1. Médecins de la même ville
+    // 1. Médecins de la même ville (insensible à la casse)
     const doctorsSameCity = await Doctor.findAll({
       include: [{
         model: User,
         as: 'user',
         attributes: ['idUser', 'firstName', 'lastName', 'profilePhoto', 'city'],
-        where: { city: userCity }
+        where: sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('user.city')),
+          sequelize.fn('LOWER', userCity || '')
+        )
       }],
       order: [
         [sequelize.literal('note IS NULL'), 'ASC'],
@@ -76,13 +79,20 @@ const getDoctorsByProximity = async (req, res) => {
       ]
     });
 
-    // 2. Médecins des autres villes
+    // 2. Médecins des autres villes (insensible à la casse)
     const doctorsOtherCities = await Doctor.findAll({
       include: [{
         model: User,
         as: 'user',
         attributes: ['idUser', 'firstName', 'lastName', 'profilePhoto', 'city'],
-        where: { city: { [sequelize.Op.ne]: userCity } }
+        where: {
+          [sequelize.Op.and]: [
+            sequelize.where(
+              sequelize.fn('LOWER', sequelize.col('user.city')),
+              { [sequelize.Op.ne]: sequelize.fn('LOWER', userCity || '') }
+            )
+          ]
+        }
       }],
       order: [
         [sequelize.literal('note IS NULL'), 'ASC'],
@@ -97,9 +107,57 @@ const getDoctorsByProximity = async (req, res) => {
   }
 };
 
+const getDoctorByIdUser = async (req, res) => {
+  try {
+    const { idUser } = req.params;
+    const doctor = await Doctor.findOne({
+      where: { idUser },
+      include: [{
+        model: User,
+        as: 'user',
+        attributes: ['idUser', 'firstName', 'lastName', 'profilePhoto', 'city']
+      }]
+    });
+    if (!doctor) return res.status(404).json({ message: 'Médecin non trouvé' });
+    res.json(doctor);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+const updateDoctorExtraInfo = async (req, res) => {
+  try {
+    const { id } = req.params; // id du doctor
+    const { experienceYears, pricePerHour, description } = req.body;
+
+    const doctor = await Doctor.findByPk(id);
+    if (!doctor) return res.status(404).json({ message: 'Médecin non trouvé' });
+
+    // Validation simple côté back
+    if (
+      experienceYears !== undefined && (isNaN(experienceYears) || experienceYears < 0) ||
+      pricePerHour !== undefined && (isNaN(pricePerHour) || pricePerHour < 0)
+    ) {
+      return res.status(400).json({ message: 'Valeurs numériques invalides (>= 0 requis)' });
+    }
+
+    if (experienceYears !== undefined) doctor.experienceYears = experienceYears;
+    if (pricePerHour !== undefined) doctor.pricePerHour = pricePerHour;
+    if (description !== undefined) doctor.description = description;
+
+    await doctor.save();
+
+    res.json({ message: 'Informations du médecin mises à jour', doctor });
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
 module.exports = {
   getDoctorByUserId,
   getDoctorById,
   getAllDoctorsSortedByNote,
-  getDoctorsByProximity
+  getDoctorsByProximity,
+  getDoctorByIdUser,
+  updateDoctorExtraInfo
 };

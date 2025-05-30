@@ -32,6 +32,13 @@ class ApiConstants {
   static const String getActiveDoctorSlots = "$baseUrl/rdv/slots/active";
   static const String getAllDoctors = "$baseUrl/doctor/best/all";
   static const String docProximity = "$baseUrl/doctor/proximity"; // Endpoint pour récupérer les médecins proches
+  static String updateDoctorExtraInfo(int doctorId) => "$baseUrl/doctor/$doctorId/extra";
+
+  // 👨‍⚕️ Détail d'un médecin par idUser
+  static String doctorByUser(int idUser) => "$baseUrl/doctor/user/$idUser";
+
+  // Route pour les rendez-vous
+  static const String rdv = "$baseUrl/rdv";
 
   // 📦 Headers communs aux requêtes HTTP
   static const Map<String, String> defaultHeaders = {
@@ -42,4 +49,5 @@ class ApiConstants {
   // ⏱ Timeout en millisecondes
   static const int connectionTimeout = 5000; // 5 secondes
   static const int receiveTimeout = 3000;    // 3 secondes
+
 }

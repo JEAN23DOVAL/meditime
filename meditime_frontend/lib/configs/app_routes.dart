@@ -19,4 +19,6 @@ class AppRoutes {
   // Rendez-vous Routes
   static const rendezVous = '/rdv_form_page';
   static const creneaudoctor = '/doctor_timeslots_pages';
+  static const doctorDetail = '/doctor_details';
+  static const rdvPage = '/rdv_page';
 }

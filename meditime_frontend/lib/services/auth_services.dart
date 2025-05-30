@@ -29,8 +29,6 @@ class AuthService {
         final token = response.data['token'];
         if (token != null) {
           await LocalStorageService.saveToken(token); // Sauvegarde le token
-          final testToken = await LocalStorageService.getToken();
-          print('Token lu juste après sauvegarde : $testToken');
           await ref.read(authProvider.notifier).reloadFromToken(token); // Met à jour l'utilisateur
           // Décoder le token pour récupérer les infos utilisateur
           final payload = JwtDecoder.decode(token);

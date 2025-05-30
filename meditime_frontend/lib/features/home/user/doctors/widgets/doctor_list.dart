@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:meditime_frontend/features/home/user/doctors/widgets/doctor_provider.dart';
+import 'package:meditime_frontend/models/doctor_model.dart';
 import 'doctor_card.dart';
 
 class DoctorList extends StatelessWidget {

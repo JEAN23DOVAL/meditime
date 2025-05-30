@@ -15,7 +15,11 @@ const Doctor = sequelize.define('Doctor', {
   hopital: { type: DataTypes.STRING(150), allowNull: false },
   adresse_consultation: { type: DataTypes.STRING(255), allowNull: false },
   note: { type: DataTypes.FLOAT, allowNull: false, defaultValue: 0 },
-  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  patientsExamined: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  experienceYears: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  pricePerHour: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  description: { type: DataTypes.TEXT, allowNull: true }
 }, {
   tableName: 'doctor',
   timestamps: false

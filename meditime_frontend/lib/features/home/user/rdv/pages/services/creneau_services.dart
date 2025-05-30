@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:meditime_frontend/core/network/dio_client.dart';
 import 'package:meditime_frontend/core/constants/api_endpoints.dart';
 import '../models/doctor_slot_model.dart';
+import '../models/available_slot_model.dart'; // Ajoute l'import
 
 class TimeslotService {
   final _dio = DioClient().dio;
@@ -33,11 +34,9 @@ class TimeslotService {
     try {
       final response = await _dio.get('${ApiConstants.getActiveDoctorSlots}/$doctorId');
       if (response.statusCode == 200) {
-        print('Réponse brute : ${response.data}');
         final slots = (response.data as List)
             .map((json) => DoctorSlot.fromJson(json))
             .toList();
-        print('Slots mappés : $slots');
         return slots;
       }
       return [];
@@ -74,5 +73,36 @@ class TimeslotService {
     } catch (e) {
       throw 'Erreur lors de la suppression du créneau';
     }
+  }
+
+  Future<List<AvailableSlot>> getAvailableSlots({
+    required int doctorId,
+    required String date,
+    required String token,
+  }) async {
+    final response = await _dio.get(
+      ApiConstants.rdv + '/available-slots',
+      queryParameters: {
+        'doctor_id': doctorId,
+        'date': date,
+      },
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      ),
+    );
+    if (response.statusCode == 200) {
+      final data = response.data;
+      final slots = data['available'] as List;
+      final now = DateTime.now();
+
+      // Filtre ici : ne garde que les créneaux dont le début est dans le futur
+      return slots
+          .map((json) => AvailableSlot.fromJson(json))
+          .where((slot) => slot.start.isAfter(now))
+          .toList();
+    }
+    throw Exception('Erreur lors de la récupération des créneaux disponibles');
   }
 }

@@ -24,96 +24,112 @@ class CategorySection extends ConsumerWidget {
     'iconColor': Colors.pink,
     'title': 'Neurologie',
   },
+
   {
     'icon': MdiIcons.stethoscope,
     'color': Color(0xFFE3F2FD), // Bleu très clair
     'iconColor': Colors.blue,
     'title': 'Médecine générale',
   },
+
   {
     'icon': MdiIcons.bacteria,
     'color': Color(0xFFE8F5E9), // Vert très clair
     'iconColor': Colors.green,
     'title': 'Infectiologie',
   },
+
   {
     'icon': MdiIcons.reproduction,
     'color': Color(0xFFFFF3E0), // Orange très clair
     'iconColor': Colors.orange,
     'title': 'Pédiatrie',
   },
+
   {
     'icon': MdiIcons.tooth,
     'color': Color(0xFFE0F2F1), // Teal clair
     'iconColor': Colors.teal,
     'title': 'Dentiste',
   },
+
   {
     'icon': MdiIcons.genderFemale,
     'color': Color(0xFFF3E5F5), // Violet clair
     'iconColor': Colors.purple,
     'title': 'Gynécologie',
   },
+
   {
     'icon': MdiIcons.eye,
     'color': Color(0xFFE8EAF6), // Indigo clair
     'iconColor': Colors.indigo,
     'title': 'Ophtalmologie',
   },
+
   {
     'icon': MdiIcons.humanMaleBoard,
     'color': Color(0xFFD7CCC8), // Marron clair (beige)
     'iconColor': Colors.brown,
     'title': 'Orthopédie',
   },
+
   {
     'icon': MdiIcons.head,
     'color': Color(0xFFEDE7F6), // Violet profond très clair
     'iconColor': Colors.deepPurple,
     'title': 'Psychiatrie',
   },
+
   {
     'icon': MdiIcons.radiologyBox,
     'color': Color(0xFFEEEEEE), // Gris doux
     'iconColor': Colors.grey,
     'title': 'Radiologie',
   },
+
   {
     'icon': MdiIcons.doctor,
     'color': Color(0xFFE1F5FE), // Bleu très clair
     'iconColor': Colors.blueAccent,
     'title': 'Chirurgie',
   },
+
   {
     'icon': MdiIcons.medicalBag,
     'color': Color(0xFFFFEBEE), // Rouge orangé clair
     'iconColor': Colors.deepOrange,
     'title': 'Anesthésie',
   },
+
   {
     'icon': MdiIcons.earHearing,
     'color': Color(0xFFE0F7FA), // Cyan clair
     'iconColor': Colors.cyan,
     'title': 'Otites',
   },
+
   {
     'icon': MdiIcons.flask,
     'color': Color(0xFFFFF8E1), // Jaune très pâle
     'iconColor': Colors.amber,
     'title': 'Endocrinologie',
   },
+
   {
     'icon': MdiIcons.lungs,
     'color': Color(0xFFE1F5FE), // Bleu ciel clair
     'iconColor': Colors.lightBlue,
     'title': 'Maladies pulmonaires',
   },
+
   {
     'icon': MdiIcons.hospitalBoxOutline,
     'color': Color(0xFFF5F5F5), // Neutre doux
     'iconColor': Colors.black,
     'title': 'Voir tout',
   },
+
 ];
 
   @override
@@ -132,7 +148,7 @@ class CategorySection extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
+            SizedBox(
               height: 140,
               child: ListView.separated(
                 padding: EdgeInsets.symmetric(horizontal: 25),

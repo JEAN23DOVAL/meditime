@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meditime_frontend/providers/AuthNotifier.dart';
 import '../services/creneau_services.dart';
 import '../models/doctor_slot_model.dart';
+import '../models/available_slot_model.dart';
 
 final timeslotServiceProvider = Provider<TimeslotService>((ref) => TimeslotService());
 
@@ -58,3 +60,31 @@ class TimeslotUpdateNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 }
+
+class AvailableSlotsParams {
+  final int doctorId;
+  final String date;
+  const AvailableSlotsParams({required this.doctorId, required this.date});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AvailableSlotsParams &&
+          runtimeType == other.runtimeType &&
+          doctorId == other.doctorId &&
+          date == other.date;
+
+  @override
+  int get hashCode => doctorId.hashCode ^ date.hashCode;
+}
+
+final availableSlotsProvider = FutureProvider.family<List<AvailableSlot>, AvailableSlotsParams>((ref, params) async {
+  final service = ref.read(timeslotServiceProvider);
+  final token = await ref.read(authProvider.notifier).getToken();
+  if (token == null) throw Exception('Token utilisateur manquant');
+  return service.getAvailableSlots(
+    doctorId: params.doctorId,
+    date: params.date,
+    token: token,
+  );
+});

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 
 class RdvTimeslotPicker extends StatelessWidget {
-  final void Function(DateTime timeslot) onTimeslotSelected;
-  const RdvTimeslotPicker({super.key, required this.onTimeslotSelected});
+  final String? doctorId;
+  final void Function(DateTime date) onTimeslotSelected;
+
+  const RdvTimeslotPicker({
+    super.key,
+    required this.doctorId,
+    required this.onTimeslotSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
