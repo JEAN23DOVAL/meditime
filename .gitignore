@@ -4,8 +4,12 @@ npm-debug.log*
 **/.env
 
 # === BACKEND (Node.js) ===
+meditime-backend/serviceAccountKey.json
 meditime-backend/node_modules/
 meditime-backend/.env
+
+# Clé Firebase
+meditime-backend/serviceAccountKey.json
 
 # === FRONTEND (Flutter) ===
 meditime_frontend/.dart_tool/
