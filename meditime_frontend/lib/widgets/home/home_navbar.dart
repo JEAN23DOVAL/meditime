@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meditime_frontend/providers/rdv_badge_provider.dart';
+import 'package:badges/badges.dart' as badges;
+import 'package:meditime_frontend/providers/barre_nav.dart';
 
 class HomeBottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -45,34 +49,48 @@ class HomeBottomNavBar extends StatelessWidget {
             const BottomNavigationBarItem(
               label: 'Docteur', icon: Icon(Icons.medical_services, size: 30),
             ),
-            const BottomNavigationBarItem(
-              label: 'RDV', icon: Icon(Icons.calendar_today, size: 30),
+            BottomNavigationBarItem(
+              icon: Consumer(
+                builder: (context, ref, _) {
+                  final badgeCount = ref.watch(rdvBadgeProvider);
+                  return Stack(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 30),
+                      if (badgeCount > 0)
+                        Positioned(
+                          right: 0, top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                            child: Text(
+                              '$badgeCount',
+                              style: const TextStyle(color: Colors.white, fontSize: 10),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              label: 'RDV',
             ),
             BottomNavigationBarItem(
-              label: 'Messages',
-              icon: Stack(
-                children: [
-                  const Icon(MdiIcons.message, size: 30),
-                  Positioned(
-                    right: 0, top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$messageCount', // Utilisation de la variable messageCount
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              icon: Consumer(
+                builder: (context, ref, _) {
+                  final unread = ref.watch(userUnreadCountProvider('all'));
+                  return badges.Badge(
+                    showBadge: unread > 0,
+                    badgeContent: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                    child: const Icon(Icons.message),
+                  );
+                },
               ),
+              label: 'Messages',
             ),
             const BottomNavigationBarItem(
               label: 'Profil', icon: Icon(MdiIcons.accountCog, size: 30),

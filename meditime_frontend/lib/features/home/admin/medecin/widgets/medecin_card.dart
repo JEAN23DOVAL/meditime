@@ -4,42 +4,45 @@ import '../details/medecin_detail_screen.dart';
 
 class MedecinCard extends StatelessWidget {
   final Medecin medecin;
-  const MedecinCard({required this.medecin, super.key});
+  final VoidCallback? onTap;
+
+  const MedecinCard({required this.medecin, this.onTap, super.key});
 
   @override
   Widget build(BuildContext context) {
-    final status = medecin.status;
-    final icon = status == 'pending'
-        ? Icons.watch_later
-        : status == 'accepted'
-            ? Icons.check_circle
-            : Icons.block;
-    final color = status == 'pending'
-        ? Colors.orange
-        : status == 'accepted'
-            ? Colors.green
-            : Colors.red;
+    final user = medecin.user;
+    final statusColor = {
+      'pending': Colors.orange,
+      'accepted': Colors.green,
+      'refused': Colors.red,
+    }[medecin.status] ?? Colors.grey;
 
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MedecinDetailScreen(medecin: medecin),
-          ),
-        );
-      },
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        elevation: 3,
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap ??
+            () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MedecinDetailScreen(medecin: medecin),
+                  ),
+                ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               CircleAvatar(
-                radius: 30,
-                backgroundColor: color.withOpacity(0.2),
-                child: Icon(icon, color: color),
+                radius: 28,
+                backgroundColor: statusColor.withOpacity(0.15),
+                backgroundImage: user?.profilePhoto != null
+                    ? NetworkImage(user!.profilePhoto!)
+                    : null,
+                child: user?.profilePhoto == null
+                    ? Icon(Icons.person, color: statusColor, size: 32)
+                    : null,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -47,16 +50,58 @@ class MedecinCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "ID: ${medecin.idUser} | ${medecin.specialite}",
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 16),
+                      "${user?.firstName ?? ''} ${user?.lastName ?? ''}".trim().isEmpty
+                          ? "Utilisateur #${medecin.idUser}"
+                          : "${user?.firstName ?? ''} ${user?.lastName ?? ''}",
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                     ),
-                    const SizedBox(height: 4),
-                    Text("Statut : ${medecin.status}",
-                        style: TextStyle(color: color)),
                     const SizedBox(height: 2),
-                    Text("Hôpital : ${medecin.hopital}",
-                        style: TextStyle(color: Colors.grey[700])),
+                    Text(
+                      medecin.specialite,
+                      style: const TextStyle(fontSize: 15, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      medecin.hopital,
+                      style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.13),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      medecin.status == 'pending'
+                          ? Icons.hourglass_top
+                          : medecin.status == 'accepted'
+                              ? Icons.verified
+                              : medecin.status == 'refused'
+                                  ? Icons.block
+                                  : Icons.help,
+                      color: statusColor,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      medecin.status == 'pending'
+                          ? "En attente"
+                          : medecin.status == 'accepted'
+                              ? "Validé"
+                              : medecin.status == 'refused'
+                                  ? "Refusé"
+                                  : "Inconnu",
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),

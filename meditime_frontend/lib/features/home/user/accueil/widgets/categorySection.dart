@@ -5,6 +5,7 @@ import 'package:meditime_frontend/features/home/user/accueil/widgets/become_doct
 import 'package:meditime_frontend/features/home/user/accueil/widgets/bestSection.dart';
 import 'package:meditime_frontend/features/home/user/accueil/widgets/completer_compte.dart';
 import 'package:meditime_frontend/features/home/user/doctors/widgets/doctor_nearby_section.dart';
+import 'package:meditime_frontend/features/home/user/doctors/widgets/prochain_rdv_section.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart'; // <-- utilise ton vrai provider
 
 class CategorySection extends ConsumerWidget {
@@ -211,6 +212,18 @@ class CategorySection extends ConsumerWidget {
               ),
             ),
             BestSection(),
+            const UpcomingRdvSection(),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: const Text(
+                'Médecins proches de vous',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
             DoctorNearbySection(),
           ],
         ),

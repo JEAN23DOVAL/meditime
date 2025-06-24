@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meditime_frontend/features/home/user/rdv/widgets/rdv_bottom_sheet_content.dart';
+import 'package:meditime_frontend/providers/rdv_badge_provider.dart';
 import 'widgets/rdv_status_tabs.dart';
 import 'package:meditime_frontend/configs/app_colors.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
@@ -33,6 +34,11 @@ class RdvPage extends ConsumerWidget {
     }
 
     final isDoctor = user.role == 'doctor';
+
+    // Réinitialise le badge quand on ouvre la page RDV
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(rdvBadgeProvider.notifier).clear();
+    });
 
     if (!isDoctor) {
       // Patient : une seule TabBar (statuts)

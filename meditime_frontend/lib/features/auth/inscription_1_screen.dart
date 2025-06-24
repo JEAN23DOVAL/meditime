@@ -5,6 +5,7 @@ import 'package:meditime_frontend/configs/app_assets.dart';
 import 'package:meditime_frontend/configs/app_routes.dart';
 import 'package:meditime_frontend/configs/app_styles.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
+import 'package:meditime_frontend/services/local_storage_service.dart';
 import 'package:meditime_frontend/widgets/buttons/appBar.dart';
 import 'package:meditime_frontend/widgets/buttons/buttons.dart';
 import 'package:meditime_frontend/widgets/formulaires/custom_text_field.dart';
@@ -84,6 +85,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
       final user = ref.read(authProvider);
       if (user != null) {
+        await LocalStorageService.completeFirstLaunch();
         if (user.role == 'admin') {
           context.go(AppRoutes.adminDashboard);
         } else {

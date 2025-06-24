@@ -38,21 +38,24 @@ class ProfileOptionTile extends StatelessWidget {
           children: [
             Icon(icon, color: AppColors.primary, size: 28),
             const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppStyles.heading3.copyWith(color: AppColors.textDark),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: AppStyles.bodyText.copyWith(color: Colors.grey),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppStyles.heading3.copyWith(color: AppColors.textDark),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: AppStyles.bodyText.copyWith(color: Colors.grey),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-            const Spacer(),
             const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 18),
           ],
         ),

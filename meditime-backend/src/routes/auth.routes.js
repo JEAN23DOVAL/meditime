@@ -3,6 +3,8 @@ const router = express.Router();
 const upload = require('../middlewares/uploadMiddleware');
 const { validateRegister, validateLogin } = require('../middlewares/validateInput');
 const { registerUser, loginUser } = require('../controllers/auth.controller');
+const authMiddleware = require('../middlewares/authMiddleware');
+const { saveFcmToken } = require('../controllers/fcm.controller');
 
 // 📌 Inscription utilisateur (avec photo de profil en option)
 router.post(
@@ -29,5 +31,8 @@ router.post(
   },
   require('../controllers/auth.controller').updateProfile
 );
+
+// Enregistrer le token FCM (POST /api/auth/fcm-token)
+router.post('/fcm-token', authMiddleware, saveFcmToken);
 
 module.exports = router;

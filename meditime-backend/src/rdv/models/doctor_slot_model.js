@@ -1,6 +1,5 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../../config/db');
-const Doctor = require('../../models/doctor_model');
 
 const DoctorSlot = sequelize.define('DoctorSlot', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
@@ -27,9 +26,5 @@ const DoctorSlot = sequelize.define('DoctorSlot', {
     }
   ]
 });
-
-// Association
-Doctor.hasMany(DoctorSlot, { foreignKey: 'doctorId', as: 'slots' });
-DoctorSlot.belongsTo(Doctor, { foreignKey: 'doctorId', as: 'doctor' });
 
 module.exports = DoctorSlot;

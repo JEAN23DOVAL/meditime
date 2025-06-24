@@ -6,6 +6,7 @@ import 'package:meditime_frontend/configs/app_colors.dart';
 import 'package:meditime_frontend/configs/app_styles.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
 import 'package:meditime_frontend/services/auth_services.dart'; // Ajoute cet import
+import 'package:meditime_frontend/services/local_storage_service.dart';
 import 'package:meditime_frontend/widgets/buttons/appBar.dart';
 import 'package:meditime_frontend/widgets/buttons/buttons.dart';
 import 'package:meditime_frontend/widgets/formulaires/custom_text_field.dart';
@@ -59,6 +60,9 @@ class _ConnexionScreenState extends ConsumerState<ConnexionScreen> {
       setState(() => _isLoading = false);
 
       if (user != null) {
+        // Marque le premier lancement comme terminé
+        await LocalStorageService.completeFirstLaunch();
+
         // Recharge l'utilisateur depuis le token pour être sûr
         final token = await ref.read(authProvider.notifier).getToken();
         if (token != null) {

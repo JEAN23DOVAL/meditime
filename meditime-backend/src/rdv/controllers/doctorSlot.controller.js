@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const sequelize = require('sequelize');
 const DoctorSlot = require('../models/doctor_slot_model');
 const Doctor = require('../../models/doctor_model');
+const { emitToRoom, emitToUser } = require('../../utils/wsEmitter');
 
 const createSlot = async (req, res) => {
   try {
@@ -41,6 +42,11 @@ const createSlot = async (req, res) => {
     // Recharge le slot pour avoir tous les champs (dont status)
     const slotWithStatus = await DoctorSlot.findByPk(slot.id);
     res.status(201).json(slotWithStatus);
+
+    // Après création/modification/suppression d'un slot
+    emitToRoom(req.app, `doctor_slots_${doctorId}`, 'slot_update', { type: 'create', slot: slotWithStatus });
+    // Pour chaque patient concerné (si tu veux notifier individuellement)
+    emitToUser(req.app, patientId, 'slot_update', { type: 'update', slot });
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
@@ -111,6 +117,11 @@ const updateSlot = async (req, res) => {
     slot.endMinute = endMinute;
     await slot.save();
     res.json(slot);
+
+    // Après création/modification/suppression d'un slot
+    emitToRoom(req.app, `doctor_slots_${slot.doctorId}`, 'slot_update', { type: 'update', slot });
+    // Pour chaque patient concerné
+    emitToUser(req.app, patientId, 'slot_update', { type: 'update', slot });
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
@@ -124,6 +135,9 @@ const deleteSlot = async (req, res) => {
     if (!slot) return res.status(404).json({ message: 'Créneau introuvable' });
     await slot.destroy();
     res.json({ message: 'Créneau supprimé avec succès' });
+
+    // Après création/modification/suppression d'un slot
+    emitToRoom(req.app, `doctor_slots_${slot.doctorId}`, 'slot_update', { type: 'delete', slot });
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }

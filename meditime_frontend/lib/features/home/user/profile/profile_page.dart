@@ -24,14 +24,6 @@ class ProfilPage extends ConsumerWidget {
         title: const Text('Mon Profil'),
         backgroundColor: AppColors.secondary,
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit, color: AppColors.textLight),
-            onPressed: () {
-              // Action modifier le profil
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -41,8 +33,8 @@ class ProfilPage extends ConsumerWidget {
             ProfileHeader(user: user),
             const SizedBox(height: 32),
             ProfileQuickActions(
-              onSettings: () {},
-              onHistory: () {},
+              onSettings: () {context.push(AppRoutes.settings);},
+              onDocuments: () {context.push(AppRoutes.documents);},
               onLogout: () async {
                 final shouldLogout = await showDialog<bool>(
                   context: context,
@@ -71,51 +63,119 @@ class ProfilPage extends ConsumerWidget {
                   await handleLogout(ref, router);
                 }
               },
+              onFavorites: user?.role == 'patient' ? () {context.push(AppRoutes.favorites);} : null,
+              onStats: user?.role == 'doctor' ? () {context.push(AppRoutes.stats);} : null,
+              isDoctor: user?.role == 'doctor',
             ),
             const SizedBox(height: 32),
-            const ProfileSectionTitle(title: 'Options'),
-            const SizedBox(height: 16),
+
+            // SECTION COMPTE
+            const ProfileSectionTitle(title: 'Compte'),
             ProfileOptionTile(
               icon: Icons.person,
               title: 'Modifier le profil',
               subtitle: 'Changez vos informations',
-              onTap: () {},
+              onTap: () {
+                context.push(AppRoutes.editProfile); 
+              },
             ),
-            // Option visible uniquement pour les docteurs
-            if (user?.role == 'doctor')
-              ProfileOptionTile(
-                icon: Icons.schedule,
-                title: 'Mes créneaux horaires',
-                subtitle: 'Gérez vos disponibilités',
-                onTap: () {
-                  context.go(AppRoutes.creneaudoctor);
-                },
-              ),
-            if (user?.role == 'doctor')
-              ProfileOptionTile(
-                icon: Icons.edit_note,
-                subtitle: 'Ajoutez vos informations',
-                // icon: Icons.edit_note,
-                title: 'Compléter mes informations',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ExtraInfoFormPage(doctorId: user!.doctorId!), // ou idUser selon ton modèle
-                    ),
-                  );
-                },
-              ),
+            ProfileOptionTile(
+              icon: Icons.lock,
+              title: 'Sécurité',
+              subtitle: 'Mot de passe, confidentialité',
+              onTap: () {
+                context.push(AppRoutes.security);
+              },
+            ),
             ProfileOptionTile(
               icon: Icons.notifications,
               title: 'Notifications',
               subtitle: 'Gérez vos notifications',
-              onTap: () {},
+              onTap: () {
+                context.push(AppRoutes.notifications);
+              },
             ),
+            if (user?.role == 'patient' || user?.role == 'doctor')
+              ProfileOptionTile(
+                icon: Icons.group,
+                title: 'Ajouter un proche',
+                subtitle: 'Gérez vos proches',
+                onTap: () {
+                  context.push(AppRoutes.addRelative);
+                },
+              ),
+
+            // SECTION SANTÉ (PATIENT)
+            if (user?.role == 'patient' || user?.role == 'doctor')
+              ...[
+                const ProfileSectionTitle(title: 'Santé'),
+                ProfileOptionTile(
+                  icon: Icons.health_and_safety,
+                  title: 'Carnet de santé',
+                  subtitle: 'Allergies, traitements, antécédents',
+                  onTap: () {
+                    context.push(AppRoutes.healthRecord);
+                  },
+                ),
+              ],
+
+            // SECTION MÉDECIN
+            if (user?.role == 'doctor')
+              ...[
+                const ProfileSectionTitle(title: 'Médecin'),
+                ProfileOptionTile(
+                  icon: Icons.people,
+                  title: 'Mes patients',
+                  subtitle: 'Liste et historique',
+                  onTap: () {
+                    context.push(AppRoutes.patientsList);
+                  },
+                ),
+                ProfileOptionTile(
+                  icon: Icons.schedule,
+                  title: 'Mes créneaux horaires',
+                  subtitle: 'Gérez vos disponibilités',
+                  onTap: () { context.go(AppRoutes.creneaudoctor); },
+                ),
+                ProfileOptionTile(
+                  icon: Icons.edit_note,
+                  title: 'Compléter mes informations',
+                  subtitle: 'Ajoutez vos infos pro',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ExtraInfoFormPage(doctorId: user!.doctorId!),
+                      ),
+                    );
+                  },
+                ),
+                ProfileOptionTile(
+                  icon: Icons.reviews,
+                  title: 'Avis reçus',
+                  subtitle: 'Voir et répondre aux avis',
+                  onTap: () {
+                    context.push(AppRoutes.reviews);
+                  },
+                ),
+              ],
+
+            // SECTION ASSISTANCE
+            const ProfileSectionTitle(title: 'Assistance'),
             ProfileOptionTile(
               icon: Icons.help,
-              title: 'Aide',
-              subtitle: 'Obtenez de l\'aide ou contactez-nous',
-              onTap: () {},
+              title: 'Aide & Support',
+              subtitle: 'FAQ, contact, assistance',
+              onTap: () {
+                context.push(AppRoutes.help);
+              },
+            ),
+            ProfileOptionTile(
+              icon: Icons.language,
+              title: 'Langue',
+              subtitle: 'Changer la langue',
+              onTap: () {
+                context.push(AppRoutes.language);
+              },
             ),
           ],
         ),

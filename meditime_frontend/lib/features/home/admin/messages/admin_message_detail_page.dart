@@ -1,32 +1,88 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meditime_frontend/configs/app_colors.dart';
 import 'package:meditime_frontend/configs/app_styles.dart';
+import 'package:meditime_frontend/core/network/socket_service.dart';
+import 'package:meditime_frontend/features/home/admin/provider/admin_message_provider.dart';
+import 'package:meditime_frontend/providers/AuthNotifier.dart';
 import 'package:meditime_frontend/services/admin_message_service.dart';
+import 'package:meditime_frontend/providers/socket_provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:meditime_frontend/services/notification_service.dart';
 
-class AdminMessageDetailPage extends StatefulWidget {
+class AdminMessageDetailPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> message;
   const AdminMessageDetailPage({super.key, required this.message});
 
   @override
-  State<AdminMessageDetailPage> createState() => _AdminMessageDetailPageState();
+  ConsumerState<AdminMessageDetailPage> createState() => _AdminMessageDetailPageState();
 }
 
-class _AdminMessageDetailPageState extends State<AdminMessageDetailPage> {
+class _AdminMessageDetailPageState extends ConsumerState<AdminMessageDetailPage> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
+  late final SocketService _socketService;
+  final ScrollController _scrollController = ScrollController(); // Ajout
 
   @override
   void initState() {
     super.initState();
     _loadConversation();
+
+    _socketService = ref.read(socketServiceProvider);
+    _socketService.on('new_message', _onNewMessage);
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final data = message.data;
+      if (data['type'] == 'message') {
+        final receiver = widget.message['receiver'];
+        final receiverId = receiver?['idUser'];
+        final senderId = int.tryParse(data['senderId'] ?? '');
+        final notifReceiverId = int.tryParse(data['receiverId'] ?? '');
+        if (senderId == receiverId || notifReceiverId == receiverId) {
+          _loadConversation();
+        }
+        NotificationService.showMessageNotification(Map<String, dynamic>.from(data));
+      }
+    });
   }
 
-  void _loadConversation() async {
+  void _onNewMessage(dynamic data) {
+    if (!mounted) return;
+    final receiver = widget.message['receiver'];
+    final receiverId = receiver?['idUser'];
+    if (data is Map &&
+        ((data['sender']?['idUser'] == receiverId) ||
+         (data['receiver']?['idUser'] == receiverId))) {
+      _loadConversation();
+      NotificationService.showMessageNotification(Map<String, dynamic>.from(data));
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
+  }
+
+  Future<void> _loadConversation() async {
     final receiver = widget.message['receiver'];
     final receiverId = receiver?['idUser'];
     if (receiverId == null) return;
     try {
       final conv = await AdminMessageService().fetchConversation(receiverId);
+      final admin = ref.read(authProvider);
+      if (admin != null) {
+        for (final msg in conv) {
+          // Marquer comme lu uniquement les messages reçus par l'admin et non lus
+          if (msg['receiver']?['idUser'] == admin.idUser && msg['is_read'] == false) {
+            await AdminMessageService().markAsRead(msg['id']);
+          }
+        }
+      }
+      if (!mounted) return;
       setState(() {
         _messages.clear();
         _messages.addAll(conv.map((msg) => {
@@ -37,11 +93,15 @@ class _AdminMessageDetailPageState extends State<AdminMessageDetailPage> {
           'receiver': msg['receiver'],
         }));
       });
+      ref.invalidate(adminUnreadCountProvider);
+      _scrollToBottom();
     } catch (_) {}
   }
 
   @override
   void dispose() {
+    _scrollController.dispose(); // Ajout ici
+    _socketService.off('new_message');
     _controller.dispose();
     super.dispose();
   }
@@ -74,6 +134,7 @@ class _AdminMessageDetailPageState extends State<AdminMessageDetailPage> {
           });
           _controller.clear();
         });
+        _scrollToBottom(); // Ajout ici
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur lors de l\'envoi du message')),
@@ -90,7 +151,6 @@ class _AdminMessageDetailPageState extends State<AdminMessageDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // final sender = widget.message['sender'];
     final receiver = widget.message['receiver'];
     final receiverName = '${receiver?['lastName'] ?? ''} ${receiver?['firstName'] ?? ''}';
 
@@ -101,7 +161,11 @@ class _AdminMessageDetailPageState extends State<AdminMessageDetailPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () {
+            Navigator.pop(context);
+            ref.invalidate(adminMessagesProvider);
+            ref.invalidate(adminUnreadCountProvider); // Ajoute cette ligne
+          },
         ),
         title: Text(
           receiverName,
@@ -138,6 +202,7 @@ class _AdminMessageDetailPageState extends State<AdminMessageDetailPage> {
           // Zone des messages
           Expanded(
             child: ListView.builder(
+              controller: _scrollController, // Ajout ici
               padding: const EdgeInsets.all(16),
               itemCount: _messages.length,
               itemBuilder: (context, index) {

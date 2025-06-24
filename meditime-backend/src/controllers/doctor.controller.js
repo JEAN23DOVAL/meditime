@@ -1,8 +1,11 @@
 const Doctor = require('../models/doctor_model');
 const User = require('../models/user_model');
 const sequelize = require('sequelize');
+const { searchDoctors } = require('./search.controller');
+const formatPhotoUrl = require('../utils/formatPhotoUrl');
 
-const BASE_URL = process.env.BASE_URL || 'http://10.0.2.2:3000';
+// const BASE_URL = process.env.BASE_URL || 'http://10.0.2.2:3000';
+const BASE_URL = process.env.BASE_URL || 'http://192.168.128.24:3000';
 
 // Helper pour générer le lien complet d'un fichier
 function fileUrl(folder, filename) {
@@ -16,7 +19,9 @@ const getDoctorByUserId = async (req, res) => {
     if (!doctor) return res.status(404).json({ message: 'Médecin non trouvé' });
 
     const doctorObj = doctor.toJSON();
-
+    if (doctorObj.user) {
+      doctorObj.user.profilePhoto = formatPhotoUrl(doctorObj.user.profilePhoto, req);
+    }
     res.json(doctorObj);
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur' });
@@ -50,7 +55,19 @@ const getAllDoctorsSortedByNote = async (req, res) => {
         ['note', 'DESC']
       ]
     });
-    res.json(doctors);
+    const doctorsWithPhoto = doctors.map(doc => {
+      const d = doc.toJSON();
+      return {
+        ...d,
+        user: d.user
+          ? {
+              ...d.user,
+              profilePhoto: formatPhotoUrl(d.user.profilePhoto, req)
+            }
+          : null
+      };
+    });
+    res.json(doctorsWithPhoto);
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
@@ -101,7 +118,23 @@ const getDoctorsByProximity = async (req, res) => {
     });
 
     // On concatène les deux listes
-    res.json([...doctorsSameCity, ...doctorsOtherCities]);
+    const allDoctors = [...doctorsSameCity, ...doctorsOtherCities];
+
+    // Adapter la photo de profil en URL
+    const doctorsWithPhoto = allDoctors.map(doc => {
+      const d = doc.toJSON();
+      return {
+        ...d,
+        user: d.user
+          ? {
+              ...d.user,
+              profilePhoto: formatPhotoUrl(d.user.profilePhoto, req)
+            }
+          : null
+      };
+    });
+
+    res.json(doctorsWithPhoto);
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
@@ -119,7 +152,14 @@ const getDoctorByIdUser = async (req, res) => {
       }]
     });
     if (!doctor) return res.status(404).json({ message: 'Médecin non trouvé' });
-    res.json(doctor);
+    const d = doctor.toJSON();
+    d.user = d.user
+      ? {
+          ...d.user,
+          profilePhoto: formatPhotoUrl(d.user.profilePhoto, req)
+        }
+      : null;
+    res.json(d);
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
@@ -153,11 +193,56 @@ const updateDoctorExtraInfo = async (req, res) => {
   }
 };
 
+// Recherche avancée de médecins (GET /api/doctor)
+const searchDoctorsController = async (req, res) => {
+  try {
+    const {
+      search,
+      available,
+      minPrice,
+      maxPrice,
+      gender,
+      sortBy,
+      order
+    } = req.query;
+
+    const doctors = await searchDoctors({
+      search,
+      available,
+      minPrice,
+      maxPrice,
+      gender,
+      sortBy,
+      order
+    });
+
+    // Adapter la photo de profil en URL
+    const BASE_URL = process.env.BASE_URL || 'http://10.0.2.2:3000';
+    const doctorsWithPhoto = doctors.map(doc => {
+      const d = doc.toJSON();
+      return {
+        ...d,
+        user: d.user
+          ? {
+              ...d.user,
+              profilePhoto: formatPhotoUrl(d.user.profilePhoto, req)
+            }
+          : null
+      };
+    });
+
+    res.json(doctorsWithPhoto);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
 module.exports = {
   getDoctorByUserId,
   getDoctorById,
   getAllDoctorsSortedByNote,
   getDoctorsByProximity,
   getDoctorByIdUser,
-  updateDoctorExtraInfo
+  updateDoctorExtraInfo,
+  searchDoctorsController
 };

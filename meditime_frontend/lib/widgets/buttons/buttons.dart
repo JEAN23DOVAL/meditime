@@ -195,9 +195,15 @@ class ActionButton extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: onPressed,
       icon: icon != null ? Icon(icon, color: textColor ?? AppColors.textLight) : const SizedBox.shrink(),
-      label: Text(
-        label,
-        style: AppStyles.bodyText.copyWith(color: textColor ?? AppColors.textLight),
+      label: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
+          style: AppStyles.bodyText.copyWith(color: textColor ?? AppColors.textLight),
+        ),
       ),
       style: ElevatedButton.styleFrom(
         backgroundColor: color ?? AppColors.primary,

@@ -33,6 +33,10 @@ const doctorRoutes = require('./routes/doctor.routes');
 app.use('/api/doctor', doctorRoutes);
 const rdvRoutes = require('./routes/rdv.routes');
 app.use('/api/rdv', rdvRoutes);
+const doctorReviewRoutes = require('./routes/doctorReview.routes');
+app.use('/api/doctor-reviews', doctorReviewRoutes);
+const consultationRoutes = require('./routes/consultation.routes');
+app.use('/api/consultations', consultationRoutes);
 
 // 🧱 Middleware global de gestion d'erreurs
 app.use((err, req, res, next) => {

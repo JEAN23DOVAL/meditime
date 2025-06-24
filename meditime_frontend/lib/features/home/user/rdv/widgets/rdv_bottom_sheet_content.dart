@@ -5,6 +5,7 @@ import 'package:meditime_frontend/configs/app_colors.dart';
 import 'package:meditime_frontend/configs/app_routes.dart';
 import 'package:meditime_frontend/features/home/user/rdv/pages/models/doctor_slot_model.dart';
 import 'package:meditime_frontend/features/home/user/rdv/pages/provider/creneau_provider.dart';
+import 'package:meditime_frontend/features/home/user/rdv/widgets/rdv_list.dart';
 import 'package:meditime_frontend/models/doctor_model.dart';
 import 'package:meditime_frontend/models/rdv_model.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
@@ -13,7 +14,9 @@ import 'package:meditime_frontend/providers/rdv_provider.dart';
 
 class RdvBottomSheetContent extends ConsumerStatefulWidget {
   final Doctor? selectedDoctor;
-  const RdvBottomSheetContent({super.key, this.selectedDoctor});
+  final Rdv? initialRdv; // <-- Ajoute ce champ
+
+  const RdvBottomSheetContent({super.key, this.selectedDoctor, this.initialRdv});
 
   @override
   ConsumerState<RdvBottomSheetContent> createState() => _RdvBottomSheetContentState();
@@ -23,14 +26,21 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
   Doctor? selectedDoctor;
   DateTime? selectedTimeslot;
   String? motif;
-
-  late final String selectedDate; // <-- Ajoute cette ligne
+  late String selectedDate;
 
   @override
   void initState() {
     super.initState();
-    selectedDoctor = widget.selectedDoctor;
-    selectedDate = DateFormat('yyyy-MM-dd').format(DateTime.now()); // <-- Initialise ici
+    if (widget.initialRdv != null) {
+      // Ne pré-remplit PAS le médecin car on n'a pas l'objet Doctor
+      selectedDoctor = widget.selectedDoctor;
+      selectedTimeslot = widget.initialRdv!.date;
+      motif = widget.initialRdv!.motif;
+      selectedDate = DateFormat('yyyy-MM-dd').format(widget.initialRdv!.date);
+    } else {
+      selectedDoctor = widget.selectedDoctor;
+      selectedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    }
   }
 
   @override
@@ -184,175 +194,208 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
       timeslotSection = const SizedBox.shrink();
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 5,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(8),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Le contenu scrollable
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(bottom: 24 + MediaQuery.of(context).viewInsets.bottom),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 5,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                      const Text(
+                        "Prendre un rendez-vous",
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- Zone Médecin ---
+                      if (selectedDoctor == null)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.person_search),
+                            label: const Text("Choisir un médecin"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size.fromHeight(48),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () async {
+                              // Ouvre la page de recherche de médecins et attends le résultat
+                              final doctor = await context.push(
+                                '/doctors/nearby',
+                                extra: {
+                                  'patientCity': user?.city,
+                                  'excludeDoctorId': user?.role == 'doctor' ? user?.doctorId : null,
+                                },
+                              );
+                              if (doctor != null && doctor is Doctor) {
+                                setState(() => selectedDoctor = doctor);
+                              }
+                            },
+                          ),
+                        )
+                      else
+                        Card(
+                          color: Colors.blue[50],
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundImage: selectedDoctor!.user?.profilePhoto != null
+                                  ? NetworkImage(selectedDoctor!.user!.profilePhoto!)
+                                  : null,
+                              child: selectedDoctor!.user?.profilePhoto == null
+                                  ? const Icon(Icons.person)
+                                  : null,
+                            ),
+                            title: Text(
+                              'Dr. ${(selectedDoctor!.user?.firstName ?? '').trim()} ${(selectedDoctor!.user?.lastName ?? '').trim()}',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.refresh, color: Colors.blueAccent),
+                                  tooltip: "Changer",
+                                  onPressed: () async {
+                                    final doctor = await context.push(
+                                      '/doctors/nearby',
+                                      extra: {
+                                        'patientCity': user?.city,
+                                        'excludeDoctorId': user?.role == 'doctor' ? user?.doctorId : null,
+                                      },
+                                    );
+                                    if (doctor != null && doctor is Doctor) {
+                                      setState(() => selectedDoctor = doctor);
+                                    }
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.red),
+                                  tooltip: "Effacer",
+                                  onPressed: () => setState(() => selectedDoctor = null),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 16),
+
+                      // --- Picker créneau ---
+                      timeslotSection,
+                      const SizedBox(height: 16),
+
+                      // --- Motif ---
+                      TextFormField(
+                        decoration: const InputDecoration(labelText: 'Motif du rendez-vous'),
+                        onChanged: (v) => motif = v,
+                      ),
+                      const SizedBox(height: 80), // Pour laisser la place au bouton
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          const Text(
-            "Prendre un rendez-vous",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 24),
+              // Bouton fixé en bas
+              SafeArea(
+                top: false,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (selectedDoctor != null && selectedTimeslot != null && motif != null && motif!.isNotEmpty)
+                        ? () async {
+                            final user = ref.read(authProvider);
+                            if (user == null) return;
 
-          // --- Zone Médecin ---
-          if (selectedDoctor == null)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.person_search),
-                label: const Text("Choisir un médecin"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () async {
-                  // Ouvre la page de recherche de médecins et attends le résultat
-                  final doctor = await context.push(
-                    '/doctors/nearby',
-                    extra: {
-                      'patientCity': user?.city,
-                      'excludeDoctorId': user?.role == 'doctor' ? user?.doctorId : null,
-                    },
-                  );
-                  if (doctor != null && doctor is Doctor) {
-                    setState(() => selectedDoctor = doctor);
-                  }
-                },
-              ),
-            )
-          else
-            Card(
-              color: Colors.blue[50],
-              margin: const EdgeInsets.only(bottom: 16),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundImage: selectedDoctor!.user?.profilePhoto != null
-                      ? NetworkImage(selectedDoctor!.user!.profilePhoto!)
-                      : null,
-                  child: selectedDoctor!.user?.profilePhoto == null
-                      ? const Icon(Icons.person)
-                      : null,
-                ),
-                title: Text(
-                  'Dr. ${(selectedDoctor!.user?.firstName ?? '').trim()} ${(selectedDoctor!.user?.lastName ?? '').trim()}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.refresh, color: Colors.blueAccent),
-                      tooltip: "Changer",
-                      onPressed: () async {
-                        final doctor = await context.push(
-                          '/doctors/nearby',
-                          extra: {
-                            'patientCity': user?.city,
-                            'excludeDoctorId': user?.role == 'doctor' ? user?.doctorId : null,
-                          },
-                        );
-                        if (doctor != null && doctor is Doctor) {
-                          setState(() => selectedDoctor = doctor);
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      tooltip: "Effacer",
-                      onPressed: () => setState(() => selectedDoctor = null),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          const SizedBox(height: 16),
-
-          // --- Picker créneau ---
-          timeslotSection,
-          const SizedBox(height: 16),
-
-          // --- Motif ---
-          TextFormField(
-            decoration: const InputDecoration(labelText: 'Motif du rendez-vous'),
-            onChanged: (v) => motif = v,
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (selectedDoctor != null && selectedTimeslot != null && motif != null && motif!.isNotEmpty)
-                  ? () async {
-                      final user = ref.read(authProvider);
-                      if (user == null) return;
-
-                      // Affiche un loader
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (_) => const Center(child: CircularProgressIndicator()),
-                      );
-
-                      try {
-                        final rdv = Rdv(
-                          id: 0,
-                          patientId: user.idUser,
-                          doctorId: selectedDoctor!.idUser,
-                          specialty: selectedDoctor!.specialite,
-                          date: selectedTimeslot!,
-                          motif: motif,
-                          durationMinutes: 60,
-                          status: 'upcoming',
-                          createdAt: DateTime.now(),
-                          updatedAt: DateTime.now(),
-                          patient: null,
-                          doctor: null,
-                        );
-                        final rdvService = ref.read(rdvServiceProvider);
-                        await rdvService.createRdv(rdv);
-
-                        if (mounted) {
-                          ref.invalidate(rdvListProvider);
-                          // Ferme tous les dialogs/bottom sheets ouverts
-                          while (Navigator.of(context, rootNavigator: true).canPop()) {
-                            Navigator.of(context, rootNavigator: true).pop();
-                          }
-                          // Affiche le SnackBar sur la page principale
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Rendez-vous réservé avec succès !')),
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => const Center(child: CircularProgressIndicator()),
                             );
-                          });
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          Navigator.of(context, rootNavigator: true).pop(); // Ferme le loader
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Erreur lors de la réservation : $e')),
-                          );
-                        }
-                      }
-                    }
-                  : null,
-              child: const Text('Réserver le RDV'),
-            ),
+
+                            try {
+                              final rdv = Rdv(
+                                id: widget.initialRdv?.id ?? 0,
+                                patientId: user.idUser,
+                                doctorId: selectedDoctor!.idUser,
+                                specialty: selectedDoctor!.specialite ?? '',
+                                date: selectedTimeslot!,
+                                motif: motif,
+                                durationMinutes: 60,
+                                status: widget.initialRdv != null ? 'pending' : 'upcoming',
+                                createdAt: DateTime.now(),
+                                updatedAt: DateTime.now(),
+                                patient: null,
+                                doctor: null,
+                              );
+                              final rdvService = ref.read(rdvServiceProvider);
+                              if (widget.initialRdv != null) {
+                                await rdvService.updateRdv(rdv);
+                              } else {
+                                await rdvService.createRdv(rdv);
+                              }
+
+                              if (mounted) {
+                                // Invalide chaque tab explicitement
+                                for (final filter in ['upcoming', 'completed', 'cancelled', 'no_show']) {
+                                  ref.invalidate(rdvListProvider(RdvListParams(
+                                    patientId: user.idUser,
+                                    doctorId: null,
+                                    filter: filter,
+                                  )));
+                                }
+                                // Invalide aussi le "prochain RDV"
+                                ref.invalidate(nextPatientRdvProvider);
+
+                                // Ferme le bottom sheet
+                                while (Navigator.of(context, rootNavigator: true).canPop()) {
+                                  Navigator.of(context, rootNavigator: true).pop();
+                                }
+                                Future.delayed(const Duration(milliseconds: 300), () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(widget.initialRdv != null
+                                        ? 'Rendez-vous reprogrammé avec succès !'
+                                        : 'Rendez-vous réservé avec succès !')),
+                                  );
+                                });
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                Navigator.of(context, rootNavigator: true).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Erreur lors de la réservation : $e')),
+                                );
+                              }
+                            }
+                          }
+                        : null,
+                    child: const Text('Réserver le RDV'),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

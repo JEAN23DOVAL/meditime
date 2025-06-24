@@ -41,10 +41,18 @@ class DoctorApplicationService {
   }
 
   Future<Map<String, dynamic>?> getLastApplication(int idUser) async {
+  try {
     final response = await _dio.dio.get('${ApiConstants.doctorApplicationLast}/$idUser');
     if (response.statusCode == 200 && response.data != null) {
       return response.data;
     }
     return null;
+  } on DioException catch (e) {
+    if (e.response?.statusCode == 404) {
+      // Cas normal : aucune demande trouvée
+      return null;
+    }
+    rethrow;
   }
+}
 }

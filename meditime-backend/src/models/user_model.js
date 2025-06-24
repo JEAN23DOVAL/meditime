@@ -53,10 +53,41 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
     allowNull: false,
-  }
+  },
+  status: {
+    type: DataTypes.ENUM('active', 'inactive', 'pending', 'suspended'),
+    allowNull: true,
+    defaultValue: 'active',
+  },
+  suspendedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  suspendedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  suspensionReason: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  lastLoginAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  deletedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  fcm_token: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 }, {
   tableName: 'users',
   timestamps: true,
 });
+
+User.hasOne(require('./doctor_model'), { foreignKey: 'idUser', as: 'Doctor' });
 
 module.exports = User;

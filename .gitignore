@@ -1,50 +1,46 @@
-# Ignorer les fichiers de logs
+# === FICHIERS LOGS & ENV ===
 *.log
 npm-debug.log*
-
-# Ignorer les dossiers node_modules dans back/
-back/node_modules/
-
-# Ignorer les fichiers .env (variables d’environnement)
 **/.env
 
-# Ignorer les fichiers temporaires système
-.DS_Store
-Thumbs.db
+# === BACKEND (Node.js) ===
+meditime-backend/node_modules/
+meditime-backend/.env
 
-# === FLUTTER / DART ===
-# Fichiers générés automatiquement par Flutter
-front/.dart_tool/
-front/.idea/
-front/.packages
-front/build/
-front/pubspec.lock
-front/flutter_*.png
+# === FRONTEND (Flutter) ===
+meditime_frontend/.dart_tool/
+meditime_frontend/.idea/
+meditime_frontend/.packages
+meditime_frontend/build/
+meditime_frontend/pubspec.lock
+meditime_frontend/flutter_*.png
 
 # Android
-front/android/.gradle/
-front/android/app/build/
+meditime_frontend/android/.gradle/
+meditime_frontend/android/app/build/
 
 # iOS
-front/ios/Flutter/Flutter.framework
-front/ios/Flutter/Flutter.podspec
-front/ios/Runner.xcworkspace/
-front/ios/build/
-front/ios/Pods/
+meditime_frontend/ios/Flutter/Flutter.framework
+meditime_frontend/ios/Flutter/Flutter.podspec
+meditime_frontend/ios/Runner.xcworkspace/
+meditime_frontend/ios/build/
+meditime_frontend/ios/Pods/
 
 # Web
-front/web/.dart_tool/
+meditime_frontend/web/.dart_tool/
 
 # macOS
-front/macos/Flutter/ephemeral/
-front/macos/build/
+meditime_frontend/macos/Flutter/ephemeral/
+meditime_frontend/macos/build/
 
 # Linux
-front/linux/build/
+meditime_frontend/linux/build/
 
 # Windows
-front/windows/build/
+meditime_frontend/windows/build/
 
 # Autres fichiers sensibles ou inutiles
 *.swp
 *.swo
+.DS_Store
+Thumbs.db

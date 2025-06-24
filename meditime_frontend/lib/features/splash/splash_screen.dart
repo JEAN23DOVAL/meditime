@@ -59,9 +59,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   /// Délai égal à la durée de l’animation, puis navigation conditionnelle
   void _startNavigationTimer() {
     Timer(_controller.duration!, () async {
+      // Vérifie que le widget est toujours monté avant d'utiliser context
+      if (!mounted) return;
       final firstLaunch = await LocalStorageService.isFirstLaunch();
+      if (!mounted) return;
       if (firstLaunch) {
         await LocalStorageService.completeFirstLaunch();
+        if (!mounted) return;
         context.go(AppRoutes.onboarding1);
       } else {
         context.go(AppRoutes.connexion);

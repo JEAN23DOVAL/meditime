@@ -97,4 +97,29 @@ class DoctorService {
     }
     throw Exception('Erreur lors de la récupération des médecins proches');
   }
+
+  Future<List<Doctor>> searchDoctors({
+    String? search,
+    bool? available,
+    double? minPrice,
+    double? maxPrice,
+    String? gender,
+  }) async {
+    final params = <String, dynamic>{};
+    if (search != null && search.isNotEmpty) params['search'] = search;
+    if (available != null) params['available'] = available;
+    if (minPrice != null) params['minPrice'] = minPrice;
+    if (maxPrice != null) params['maxPrice'] = maxPrice;
+    if (gender != null && gender.isNotEmpty) params['gender'] = gender;
+
+    final response = await _dio.get(
+      "${ApiConstants.baseUrl}/doctor", // <-- Utilise bien /doctor
+      queryParameters: params,
+    );
+    if (response.statusCode == 200) {
+      final data = response.data as List;
+      return data.map((json) => Doctor.fromJson(json)).toList();
+    }
+    throw Exception('Erreur lors de la recherche des médecins');
+  }
 }

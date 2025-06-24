@@ -6,7 +6,8 @@ const fs = require('fs');
 const User = require('../models/user_model');
 const generateToken = require('../utils/generateToken');
 const { hashPassword, comparePassword } = require('../utils/hashPassword');
-const BASE_URL = process.env.BASE_URL || 'http://10.0.2.2:3000';
+const formatPhotoUrl = require('../utils/formatPhotoUrl');
+const { emitToUser } = require('../utils/wsEmitter');
 
 // ✅ Inscription utilisateur (avec upload image)
 const registerUser = async (req, res) => {
@@ -47,14 +48,16 @@ const registerUser = async (req, res) => {
         firstName: newUser.firstName,
         email: newUser.email,
         profilePhoto: newUser.profilePhoto
-          ? `${BASE_URL}/uploads/photo_profil/${newUser.profilePhoto}`
+          ? formatPhotoUrl(newUser.profilePhoto, req)
           : null,
         birthDate: newUser.birthDate,
         gender: newUser.gender,
         phone: newUser.phone,
         city: newUser.city,
         role: newUser.role,
-        isVerified: newUser.isVerified
+        isVerified: newUser.isVerified,
+        status: newUser.status,
+        lastLoginAt: newUser.lastLoginAt
       },
       token
     });
@@ -81,6 +84,10 @@ const loginUser = async (req, res) => {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
+    // 🕒 Mettre à jour la date de dernière connexion
+    user.lastLoginAt = new Date();
+    await user.save();
+
     // 🔑 Générer un token JWT
     const token = await generateToken(user);
 
@@ -93,14 +100,16 @@ const loginUser = async (req, res) => {
         firstName: user.firstName,
         email: user.email,
         profilePhoto: user.profilePhoto
-          ? `${BASE_URL}/uploads/photo_profil/${user.profilePhoto}`
+          ? formatPhotoUrl(user.profilePhoto, req)
           : null,
         birthDate: user.birthDate,
         gender: user.gender,
         phone: user.phone,
         city: user.city,
         role: user.role,
-        isVerified: user.isVerified
+        isVerified: user.isVerified,
+        status: user.status,
+        lastLoginAt: user.lastLoginAt
       },
       token
     });
@@ -154,9 +163,14 @@ const updateProfile = async (req, res) => {
     user.isVerified = !!allFieldsFilled;
 
     await user.save();
+    // Temps réel : notifier l'utilisateur de la mise à jour de son profil
+    emitToUser(req.app, user.idUser, 'profile_update', { user });
 
     // Générer un nouveau token avec les infos à jour
     const token = generateToken(user);
+
+    // Après updateProfile
+    emitToUser(req.app, user.idUser, 'profile_update', { user });
 
     res.status(200).json({
       message: "Profil mis à jour avec succès",
@@ -166,14 +180,16 @@ const updateProfile = async (req, res) => {
         firstName: user.firstName,
         email: user.email,
         profilePhoto: user.profilePhoto
-          ? `${BASE_URL}/uploads/photo_profil/${user.profilePhoto}`
+          ? formatPhotoUrl(user.profilePhoto, req)
           : null,
         birthDate: user.birthDate,
         gender: user.gender,
         phone: user.phone,
         city: user.city,
         role: user.role,
-        isVerified: user.isVerified
+        isVerified: user.isVerified,
+        status: user.status,
+        lastLoginAt: user.lastLoginAt
       },
       token
     });

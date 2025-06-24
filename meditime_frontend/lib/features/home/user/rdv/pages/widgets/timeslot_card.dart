@@ -134,24 +134,42 @@ class TimeslotCard extends StatelessWidget {
                       ElevatedButton.icon(
                         onPressed: onEdit,
                         icon: const Icon(Icons.edit, size: 18),
-                        label: const Text("Modifier"),
+                        label: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "Modifier",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueAccent,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           textStyle: const TextStyle(fontSize: 13),
+                          minimumSize: const Size(120, 36),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(height: 3),
                       ElevatedButton.icon(
                         onPressed: onDelete,
                         icon: const Icon(Icons.delete, size: 18),
-                        label: const Text("Supprimer"),
+                        label: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            "Supprimer",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.redAccent,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           textStyle: const TextStyle(fontSize: 13),
+                          minimumSize: const Size(120, 36),
                         ),
                       ),
                     ],

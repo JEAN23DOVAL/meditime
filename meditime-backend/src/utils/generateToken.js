@@ -1,9 +1,10 @@
 const jwt = require('jsonwebtoken');
 const Doctor = require('../models/doctor_model');
+const formatPhotoUrl = require('./formatPhotoUrl'); // Ajoute cette ligne
 
 // On ne peut pas utiliser async dans un middleware JWT classique,
 // donc on exporte une version asynchrone à utiliser dans les contrôleurs
-const generateToken = async (user) => {
+const generateToken = async (user, req) => {
   let doctorId = null;
   if (user.role === 'doctor') {
     const doctor = await Doctor.findOne({ where: { idUser: user.idUser } });
@@ -16,7 +17,9 @@ const generateToken = async (user) => {
       lastName: user.lastName,
       firstName: user.firstName,
       email: user.email,
-      profilePhoto: user.profilePhoto,
+      profilePhoto: user.profilePhoto
+        ? formatPhotoUrl(user.profilePhoto, req)
+        : null,
       birthDate:
         user.birthDate && !isNaN(new Date(user.birthDate).getTime())
           ? (typeof user.birthDate === 'string'

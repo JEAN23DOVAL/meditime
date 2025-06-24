@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:meditime_frontend/models/user_model.dart';
 import 'package:meditime_frontend/services/local_storage_service.dart';
+import 'package:meditime_frontend/core/network/socket_service.dart';
 
 final authProvider = StateNotifierProvider<AuthNotifier, User?>((ref) {
   return AuthNotifier();
@@ -29,6 +30,9 @@ class AuthNotifier extends StateNotifier<User?> {
     try {
       final payload = JwtDecoder.decode(token);
       state = User.fromMap(payload);
+      // Connecte le socket après login
+      final container = ProviderContainer();
+      await container.read(socketServiceProvider).connect();
     } catch (e) {
       state = null;
     }

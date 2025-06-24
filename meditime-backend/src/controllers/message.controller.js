@@ -1,5 +1,13 @@
 const Message = require('../models/message_model');
 const User = require('../models/user_model');
+const formatPhotoUrl = require('../utils/formatPhotoUrl');
+const { emitToUser } = require('../utils/wsEmitter');
+const { sendFcmToUser } = require('../utils/fcm'); // Ajoute cet import
+
+// Fonction utilitaire pour formater l'URL de la photo de profil
+function formatPhoto(photo, req) {
+  return formatPhotoUrl(photo, req);
+}
 
 const getUserMessages = async (req, res) => {
   try {
@@ -11,7 +19,15 @@ const getUserMessages = async (req, res) => {
         { model: User, as: 'sender', attributes: ['idUser', 'lastName', 'firstName', 'role', 'profilePhoto'] }
       ]
     });
-    res.json(messages);
+    // Adapter la photo de profil du sender
+    const messagesWithPhoto = messages.map(msg => {
+      const m = msg.toJSON();
+      if (m.sender) {
+        m.sender.profilePhoto = formatPhoto(m.sender.profilePhoto, req);
+      }
+      return m;
+    });
+    res.json(messagesWithPhoto);
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
@@ -27,7 +43,14 @@ const getAllMessages = async (req, res) => {
         { model: User, as: 'receiver', attributes: ['idUser', 'lastName', 'firstName', 'role', 'profilePhoto'] }
       ]
     });
-    res.json(messages);
+    // Adapter la photo de profil du sender et receiver
+    const messagesWithPhoto = messages.map(msg => {
+      const m = msg.toJSON();
+      if (m.sender) m.sender.profilePhoto = formatPhoto(m.sender.profilePhoto, req);
+      if (m.receiver) m.receiver.profilePhoto = formatPhoto(m.receiver.profilePhoto, req);
+      return m;
+    });
+    res.json(messagesWithPhoto);
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
@@ -73,7 +96,7 @@ const sendMessage = async (req, res) => {
       content,
       subject: subject || null,
       type: type || 'user_to_admin',
-      is_read: false // <-- Ajout explicite
+      is_read: false
     });
 
     // Inclure les infos du sender et receiver dans la réponse
@@ -84,7 +107,34 @@ const sendMessage = async (req, res) => {
       ]
     });
 
-    res.status(201).json(fullMessage);
+    // Adapter la photo de profil du sender et receiver
+    const m = fullMessage.toJSON();
+    if (m.sender) m.sender.profilePhoto = formatPhoto(m.sender.profilePhoto, req);
+    if (m.receiver) m.receiver.profilePhoto = formatPhoto(m.receiver.profilePhoto, req);
+
+    res.status(201).json(m);
+
+    // Temps réel : notifier le destinataire et l'expéditeur (après la réponse HTTP)
+    emitToUser(req.app, receiver_id, 'new_message', m);
+    emitToUser(req.app, senderId, 'message_sent', m);
+
+    // 🔔 Envoi notification FCM au destinataire
+    const notifTitle = m.sender?.role === 'admin'
+      ? 'Message de l\'administrateur'
+      : `Nouveau message de ${m.sender?.firstName || ''} ${m.sender?.lastName || ''}`;
+    const notifBody = m.content.length > 60 ? m.content.substring(0, 60) + '...' : m.content;
+    sendFcmToUser(receiver_id, {
+      title: notifTitle,
+      body: notifBody
+    }, {
+      type: 'message',
+      messageId: String(m.id),
+      senderId: String(m.sender?.idUser),
+      receiverId: String(m.receiver?.idUser),
+      senderName: `${m.sender?.firstName || ''} ${m.sender?.lastName || ''}`,
+      conversationId: String(m.sender?.idUser === receiver_id ? m.receiver?.idUser : m.sender?.idUser)
+    }).catch(console.error);
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Erreur serveur lors de l'envoi du message" });

@@ -2,7 +2,12 @@ const Rdv = require('../models/rdv_model');
 const User = require('../models/user_model');
 const Doctor = require('../models/doctor_model'); // <-- Ajoute cette ligne
 const DoctorSlot = require('../rdv/models/doctor_slot_model');
+const Consultation = require('../models/consultation_model');
 const { Op } = require('sequelize');
+const formatPhotoUrl = require('../utils/formatPhotoUrl');
+const { sendFcmToUser } = require('../utils/fcm');
+const { notifyRdvStatus } = require('../utils/rdvNotification');
+const { emitToUser } = require('../utils/wsEmitter'); 
 
 // Créer un rendez-vous
 const createRdv = async (req, res) => {
@@ -13,11 +18,14 @@ const createRdv = async (req, res) => {
     }
     const rdvDate = new Date(date);
 
+    const blockingStatuses = ['pending', 'upcoming'];
+
     // Vérifie que le patient n'a pas déjà un rdv à cette heure
     const patientConflict = await Rdv.findOne({
       where: {
         patient_id,
-        date: rdvDate
+        date: rdvDate,
+        status: blockingStatuses
       }
     });
     if (patientConflict) {
@@ -28,7 +36,8 @@ const createRdv = async (req, res) => {
     const doctorConflict = await Rdv.findOne({
       where: {
         doctor_id,
-        date: rdvDate
+        date: rdvDate,
+        status: blockingStatuses
       }
     });
     if (doctorConflict) {
@@ -48,13 +57,18 @@ const createRdv = async (req, res) => {
     // Recharge le RDV avec les associations patient et doctor
     const rdvWithUsers = await Rdv.findByPk(rdv.id, {
       include: [
-        { model: User, as: 'patient', attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto'] },
-        { model: User, as: 'doctor', attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto'] },
-        { model: Doctor, as: 'doctorInfo', attributes: ['id'] }
+        { model: User, as: 'rdvPatient', attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto'] },
+        { model: User, as: 'rdvDoctor', attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto'] },
+        { model: Doctor, as: 'rdvDoctorProfile', attributes: ['id'] },
+        { model: Consultation, as: 'rdvConsultation' }
       ]
     });
 
-    res.status(201).json(rdvToJson(rdvWithUsers));
+    // ⚡️ Envoie la réponse tout de suite
+    res.status(201).json(rdvToJson(rdvWithUsers, req));
+
+    // ⏳ Notification en arrière-plan, ne bloque pas la réponse
+    notifyRdvStatus(req.app, rdv, null).catch(console.error);
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
@@ -63,42 +77,101 @@ const createRdv = async (req, res) => {
 // Récupérer tous les rendez-vous (optionnel : filtrer par patient ou médecin)
 const getAllRdvs = async (req, res) => {
   try {
-    const userId = req.user.idUser;
-    const userRole = req.user.role;
-    const { doctor_id, patient_id } = req.query;
-    let where = {};
+    const { doctor_id, patient_id, status, date, startDate, endDate, search, sortBy = 'date', order = 'DESC' } = req.query;
 
-    if (userRole === 'patient') {
-      // Un patient ne voit que ses propres rdv
-      where.patient_id = userId;
-      if (doctor_id) where.doctor_id = doctor_id;
-    } else if (userRole === 'doctor') {
-      // Si on demande explicitement patient_id = userId, alors il veut voir ses RDV en tant que patient
-      if (patient_id && parseInt(patient_id) === userId) {
-        where.patient_id = userId;
-        if (doctor_id) where.doctor_id = doctor_id;
+    let where = {};
+    if (doctor_id) where.doctor_id = parseInt(doctor_id, 10);
+    if (patient_id) where.patient_id = parseInt(patient_id, 10);
+
+    // Correction ici : accepte plusieurs statuts séparés par virgule
+    if (status) {
+      if (status.includes(',')) {
+        where.status = { [Op.in]: status.split(',') };
       } else {
-        // Sinon, il veut voir ses RDV en tant que médecin
-        where.doctor_id = userId;
-        if (patient_id) where.patient_id = patient_id;
+        where.status = status;
       }
-    } else {
-      // Pour un admin ou autre, tu peux adapter ici (ex: voir tous les rdv)
-      return res.status(403).json({ message: "Accès non autorisé" });
+    }
+    if (date) where.date = date;
+    if (startDate && endDate) {
+      where.date = { [Op.between]: [new Date(startDate), new Date(endDate)] };
     }
 
-    const rdvs = await Rdv.findAll({
+    // Inclure TOUS les patients et médecins (pas de where dans include)
+    let include = [
+      {
+        model: User,
+        as: 'rdvPatient',
+        attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto', 'email', 'city'],
+      },
+      {
+        model: User,
+        as: 'rdvDoctor',
+        attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto', 'email', 'city'],
+      },
+      {
+        model: Doctor,
+        as: 'rdvDoctorProfile',
+        attributes: ['id', 'specialite']
+      },
+      {
+        model: Consultation,
+        as: 'rdvConsultation',
+        required: false,
+        attributes: [
+          'id', 'rdv_id', 'patient_id', 'diagnostic', 'prescription', 'doctor_notes', 'created_at', 'updated_at'
+        ]
+      }
+    ];
+
+    let rdvs = await Rdv.findAll({
       where,
-      include: [
-        { model: User, as: 'patient', attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto'] },
-        { model: User, as: 'doctor', attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto'] },
-        { model: Doctor, as: 'doctorInfo', attributes: ['id'] }
-      ],
-      order: [['date', 'DESC']]
+      include,
+      order: [[sortBy, order]]
     });
-    res.json(rdvs.map(rdvToJson));
+
+    // Recherche insensible à la casse sur patient, médecin, spécialité
+    if (search && search.trim() !== '') {
+      const searchLower = search.toLowerCase();
+      rdvs = rdvs.filter(rdv => {
+        // Patient
+        const patientMatch =
+          rdv.rdvPatient &&
+          (
+            (rdv.rdvPatient.firstName && rdv.rdvPatient.firstName.toLowerCase().includes(searchLower)) ||
+            (rdv.rdvPatient.lastName && rdv.rdvPatient.lastName.toLowerCase().includes(searchLower))
+          );
+        // Médecin
+        const doctorMatch =
+          rdv.rdvDoctor &&
+          (
+            (rdv.rdvDoctor.firstName && rdv.rdvDoctor.firstName.toLowerCase().includes(searchLower)) ||
+            (rdv.rdvDoctor.lastName && rdv.rdvDoctor.lastName.toLowerCase().includes(searchLower))
+          );
+        // Spécialité
+        const specialiteMatch =
+          rdv.rdvDoctorProfile &&
+          rdv.rdvDoctorProfile.specialite &&
+          rdv.rdvDoctorProfile.specialite.toLowerCase().includes(searchLower);
+
+        // OU logique
+        return patientMatch || doctorMatch || specialiteMatch;
+      });
+    }
+
+    let formatted = rdvs.map(rdv => rdvToJson(rdv, req));
+    if (req.excludeConsultation) {
+      formatted = formatted.map(rdv => {
+        delete rdv.consultation;
+        return rdv;
+      });
+    }
+    return res.json(formatted);
   } catch (error) {
-    res.status(500).json({ message: 'Erreur serveur' });
+    console.error('Error in getAllRdvs:', error);
+    return res.status(500).json({
+      message: 'Erreur serveur',
+      error: process.env.NODE_ENV === 'development' ? error.toString() : undefined
+    });
   }
 };
 
@@ -108,15 +181,39 @@ const getRdvById = async (req, res) => {
     const { id } = req.params;
     const rdv = await Rdv.findByPk(id, {
       include: [
-        { model: User, as: 'patient', attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto'] },
-        { model: User, as: 'doctor', attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto'] },
-        { model: Doctor, as: 'doctorInfo', attributes: ['id'] } // <-- Ajoute cette ligne
+        { 
+          model: User, 
+          as: 'rdvPatient', 
+          attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto', 'email', 'city'] // <-- ajoute ici
+        },
+        { 
+          model: User, 
+          as: 'rdvDoctor', 
+          attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto', 'email', 'city'] // <-- ajoute ici
+        },
+        { model: Doctor, as: 'rdvDoctorProfile', attributes: ['id', 'specialite'] },
+        { 
+          model: Consultation, 
+          as: 'rdvConsultation', 
+          required: false,
+          attributes: [
+            'id', 
+            'rdv_id',
+            'patient_id',
+            'diagnostic',
+            'prescription',
+            'doctor_notes',
+            'created_at',
+            'updated_at'
+          ]
+        }
       ]
     });
     if (!rdv) return res.status(404).json({ message: 'Rendez-vous non trouvé' });
-    res.json(rdvToJson(rdv));
+    res.json(rdvToJson(rdv, req));
   } catch (error) {
-    res.status(500).json({ message: 'Erreur serveur' });
+    console.error('Erreur dans getRdvById:', error);
+    res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
 
@@ -124,19 +221,53 @@ const getRdvById = async (req, res) => {
 const updateRdv = async (req, res) => {
   try {
     const { id } = req.params;
-    const { specialty, date, status, motif, duration_minutes } = req.body;
+    const { specialty, date, motif, duration_minutes } = req.body;
     const rdv = await Rdv.findByPk(id);
     if (!rdv) return res.status(404).json({ message: 'Rendez-vous non trouvé' });
 
+    // Si la date change, vérifier les conflits
+    if (date && date !== rdv.date.toISOString()) {
+      const rdvDate = new Date(date);
+      const blockingStatuses = ['pending', 'upcoming'];
+
+      // Conflit patient
+      const patientConflict = await Rdv.findOne({
+        where: {
+          patient_id: rdv.patient_id,
+          date: rdvDate,
+          status: blockingStatuses,
+          id: { [Op.ne]: rdv.id }
+        }
+      });
+      if (patientConflict) {
+        return res.status(409).json({ message: "Vous avez déjà un rendez-vous à cette heure." });
+      }
+
+      // Conflit médecin
+      const doctorConflict = await Rdv.findOne({
+        where: {
+          doctor_id: rdv.doctor_id,
+          date: rdvDate,
+          status: blockingStatuses,
+          id: { [Op.ne]: rdv.id }
+        }
+      });
+      if (doctorConflict) {
+        return res.status(409).json({ message: "Ce créneau est déjà réservé chez ce médecin." });
+      }
+
+      rdv.date = rdvDate;
+    }
+
     if (specialty !== undefined) rdv.specialty = specialty;
-    if (date !== undefined) rdv.date = date;
-    if (status !== undefined) rdv.status = status;
     if (motif !== undefined) rdv.motif = motif;
     if (duration_minutes !== undefined) rdv.duration_minutes = duration_minutes;
 
+    // Remettre le statut à pending
+    rdv.status = 'pending';
     rdv.updated_at = new Date();
     await rdv.save();
-    res.json(rdvToJson(rdv));
+    res.json(rdvToJson(rdv, req));
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
@@ -224,23 +355,219 @@ const getAvailableSlots = async (req, res) => {
   }
 };
 
-function rdvToJson(rdv) {
+// Médecin accepte un RDV (statut: upcoming)
+const acceptRdv = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.idUser;
+    const userRole = req.user.role;
+    const rdv = await Rdv.findByPk(id);
+    if (!rdv) return res.status(404).json({ message: 'Rendez-vous non trouvé' });
+    if (userRole !== 'doctor' || rdv.doctor_id !== userId) {
+      return res.status(403).json({ message: 'Accès interdit' });
+    }
+    if (rdv.status !== 'pending') {
+      return res.status(400).json({ message: 'Seuls les rendez-vous en attente peuvent être validés' });
+    }
+    rdv.status = 'upcoming';
+    rdv.updated_at = new Date();
+    await rdv.save();
+
+    res.json({ message: 'Rendez-vous accepté', rdv: rdvToJson(rdv, req) });
+
+    // Notification en arrière-plan, ne bloque pas la réponse
+    notifyRdvStatus(req.app, rdv, 'pending').catch(console.error);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// Médecin refuse un RDV (statut: refused)
+const refuseRdv = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.idUser;
+    const userRole = req.user.role;
+    const rdv = await Rdv.findByPk(id);
+    if (!rdv) return res.status(404).json({ message: 'Rendez-vous non trouvé' });
+    if (userRole !== 'doctor' || rdv.doctor_id !== userId) {
+      return res.status(403).json({ message: 'Accès interdit' });
+    }
+    if (rdv.status !== 'pending') {
+      return res.status(400).json({ message: 'Seuls les rendez-vous en attente peuvent être refusés' });
+    }
+    rdv.status = 'refused';
+    rdv.updated_at = new Date();
+    await rdv.save();
+
+    res.json({ message: 'Rendez-vous refusé', rdv: rdvToJson(rdv, req) });
+
+    // Notification en arrière-plan, ne bloque pas la réponse
+    notifyRdvStatus(req.app, rdv, 'pending').catch(console.error);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// Annuler un rendez-vous (accessible au patient ou au médecin)
+const cancelRdv = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.idUser;
+    const rdv = await Rdv.findByPk(id);
+    if (!rdv) return res.status(404).json({ message: 'Rendez-vous non trouvé' });
+
+    // Autorise si l'utilisateur est le patient OU le médecin du RDV
+    if (rdv.patient_id !== userId && rdv.doctor_id !== userId) {
+      return res.status(403).json({ message: 'Accès interdit' });
+    }
+
+    rdv.status = 'cancelled';
+    rdv.updated_at = new Date();
+    await rdv.save();
+
+    res.json({ message: 'Rendez-vous annulé', rdv: rdvToJson(rdv, req) });
+
+    // Notification en arrière-plan, ne bloque pas la réponse
+    notifyRdvStatus(req.app, rdv, rdv.status, req.user.idUser).catch(console.error);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// Ajoute cette méthode dans ton controller
+const hasRdvBetweenPatientAndDoctor = async (req, res) => {
+  try {
+    const { patient_id, doctor_id } = req.query;
+    if (!patient_id || !doctor_id) {
+      return res.status(400).json({ message: 'patient_id et doctor_id requis' });
+    }
+    const allowedStatuses = ['completed', 'upcoming', 'no_show', 'doctor_no_show', 'cancelled', 'both_no_show'];
+    const rdv = await Rdv.findOne({
+      where: {
+        patient_id,
+        doctor_id,
+        status: { [Op.in]: allowedStatuses }
+      }
+    });
+    res.json({ exists: !!rdv });
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur', error: error.message });
+  }
+};
+
+// Dans rdv.controller.js
+function rdvToJson(rdv, req) {
   const obj = rdv.toJSON ? rdv.toJSON() : rdv;
   return {
     id: obj.id,
     patient_id: obj.patient_id,
     doctor_id: obj.doctor_id,
-    doctor_table_id: obj.doctorInfo?.id ?? null, // <-- Ajoute ce champ
+    doctor_table_id: obj.rdvDoctorProfile?.id || null,
     specialty: obj.specialty,
     date: obj.date,
     status: obj.status,
-    motif: obj.motif ?? null,
+    motif: obj.motif || null,
     duration_minutes: obj.duration_minutes,
     created_at: obj.created_at,
     updated_at: obj.updated_at,
-    patient: obj.patient ?? null,
-    doctor: obj.doctor ?? null
+    doctor_present: obj.doctor_present, // <-- AJOUTE ICI
+    doctor_presence_reason: obj.doctor_presence_reason, // <-- AJOUTE ICI
+    patient_present: obj.patient_present, // <-- AJOUTE ICI
+    patient_presence_reason: obj.patient_presence_reason, // <-- AJOUTE ICI
+    patient: obj.rdvPatient ? {
+      idUser: obj.rdvPatient.idUser,
+      lastName: obj.rdvPatient.lastName,
+      firstName: obj.rdvPatient.firstName,
+      profilePhoto: formatPhotoUrl(obj.rdvPatient.profilePhoto, req),
+      email: obj.rdvPatient.email,
+      city: obj.rdvPatient.city
+    } : null,
+    doctor: obj.rdvDoctor ? {
+      idUser: obj.rdvDoctor.idUser,
+      lastName: obj.rdvDoctor.lastName,
+      firstName: obj.rdvDoctor.firstName,
+      profilePhoto: formatPhotoUrl(obj.rdvDoctor.profilePhoto, req),
+      specialite: obj.rdvDoctorProfile?.specialite,
+      email: obj.rdvDoctor.email,
+      city: obj.rdvDoctor.city
+    } : null,
   };
 }
 
-module.exports = { createRdv, getAllRdvs, getRdvById, updateRdv, deleteRdv, getAvailableSlots };
+// PATCH /rdv/:id/mark-presence
+const markPresence = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { present, reason } = req.body;
+    const userId = req.user.idUser;
+    const userRole = req.user.role;
+    const rdv = await Rdv.findByPk(id);
+    if (!rdv) return res.status(404).json({ message: 'RDV non trouvé' });
+
+    const now = new Date();
+    const rdvStart = new Date(rdv.date);
+    const rdvEnd = new Date(rdvStart.getTime() + rdv.duration_minutes * 60000);
+    const limit = new Date(rdvEnd.getTime() + 24 * 60 * 60 * 1000);
+
+    if (now > limit) {
+      return res.status(403).json({ message: 'La période de validation de présence est expirée.' });
+    }
+
+    let prevStatus = rdv.status;
+
+    // Marque la présence
+    if (userRole === 'doctor' && rdv.doctor_id === userId) {
+      rdv.doctor_present = present;
+      rdv.doctor_presence_reason = reason;
+    } else if (userRole === 'patient' && rdv.patient_id === userId) {
+      rdv.patient_present = present;
+      rdv.patient_presence_reason = reason;
+    } else {
+      return res.status(403).json({ message: 'Accès interdit' });
+    }
+
+    // Logique stricte de statut
+    // 1. Pendant le RDV (avant rdvEnd) : statut reste "upcoming"
+    // 2. À la fin du RDV (rdvEnd) ou après : statut évolue selon les présences
+    if (now < rdvEnd) {
+      // Ne change pas le statut, reste "upcoming"
+    } else {
+      // Après la fin du RDV, applique la logique métier
+      if (rdv.doctor_present === true && rdv.patient_present === true) {
+        rdv.status = 'completed';
+      } else if (rdv.doctor_present === true && rdv.patient_present !== true) {
+        rdv.status = 'no_show';
+      } else if (rdv.patient_present === true && rdv.doctor_present !== true) {
+        rdv.status = 'doctor_no_show';
+      } else if (
+        (rdv.doctor_present !== true && rdv.patient_present !== true)
+      ) {
+        rdv.status = 'both_no_show';
+      }
+    }
+
+    rdv.updated_at = new Date();
+    await rdv.save();
+
+    notifyRdvStatus(req.app, rdv, prevStatus, userId).catch(console.error);
+
+    res.json({ success: true, status: rdv.status });
+  } catch (e) {
+    res.status(500).json({ message: 'Erreur serveur', error: e.message });
+  }
+};
+
+module.exports = {
+  createRdv,
+  getAllRdvs,
+  getRdvById,
+  updateRdv,
+  deleteRdv,
+  getAvailableSlots,
+  acceptRdv,
+  refuseRdv,
+  cancelRdv, // <-- Ajoute ici
+  hasRdvBetweenPatientAndDoctor,
+  markPresence, // Ajoute cette ligne
+};

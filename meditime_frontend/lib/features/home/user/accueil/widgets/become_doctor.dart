@@ -41,9 +41,16 @@ class BecomeDoctor extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  'Proposez vos services aux patients.',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Proposez vos services aux patients.',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
                 ),
               ],
             ),

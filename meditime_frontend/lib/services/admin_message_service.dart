@@ -40,4 +40,8 @@ class AdminMessageService {
     }
     throw Exception('Erreur lors de la récupération de la conversation');
   }
+
+  Future<void> markAsRead(int messageId) async {
+    await _dio.patch('/messages/$messageId/read');
+  }
 }

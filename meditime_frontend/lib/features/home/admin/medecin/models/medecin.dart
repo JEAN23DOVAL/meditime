@@ -15,6 +15,7 @@ class Medecin {
   final String? adminMessage;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final MedecinUser? user; // Ajouté
 
   Medecin({
     required this.id,
@@ -33,6 +34,7 @@ class Medecin {
     this.adminMessage,
     required this.createdAt,
     required this.updatedAt,
+    this.user,
   });
 
   factory Medecin.fromJson(Map<String, dynamic> json) => Medecin(
@@ -52,5 +54,36 @@ class Medecin {
         adminMessage: json['admin_message'],
         createdAt: DateTime.parse(json['created_at']),
         updatedAt: DateTime.parse(json['updated_at']),
+        user: json['user'] != null ? MedecinUser.fromJson(json['user']) : null,
+      );
+}
+
+class MedecinUser {
+  final int idUser;
+  final String? firstName;
+  final String? lastName;
+  final String? email;
+  final String? phone;
+  final String? profilePhoto;
+  final String? status;
+
+  MedecinUser({
+    required this.idUser,
+    this.firstName,
+    this.lastName,
+    this.email,
+    this.phone,
+    this.profilePhoto,
+    this.status,
+  });
+
+  factory MedecinUser.fromJson(Map<String, dynamic> json) => MedecinUser(
+        idUser: json['idUser'],
+        firstName: json['firstName'],
+        lastName: json['lastName'],
+        email: json['email'],
+        phone: json['phone'],
+        profilePhoto: json['profilePhoto'],
+        status: json['status'],
       );
 }

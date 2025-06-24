@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meditime_frontend/features/home/user/accueil/widgets/headerSection.dart';
 import 'package:meditime_frontend/features/home/user/accueil/widgets/searchSection.dart';
 import 'package:meditime_frontend/features/home/user/accueil/widgets/categorySection.dart';
 import 'package:meditime_frontend/widgets/transition/animated_section.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       color: const Color(0xFF36A9E1),
       child: SingleChildScrollView(

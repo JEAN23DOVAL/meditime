@@ -12,11 +12,17 @@ class DoctorNearbySection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final doctorsAsync = ref.watch(doctorNearbyProvider);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      height: 350, // Ajuste selon ton design
-      child: doctorsAsync.when(
-        data: (doctors) => ListView.builder(
+    return doctorsAsync.when(
+      data: (doctors) {
+        if (doctors.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('Aucun médecin proche trouvé.'),
+          );
+        }
+        return ListView.builder(
+          shrinkWrap: true, // <-- Important pour Column/ScrollView parent
+          physics: const NeverScrollableScrollPhysics(), // <-- Désactive le scroll interne
           itemCount: doctors.length,
           itemBuilder: (context, index) => DoctorNearbyCard(
             doctor: doctors[index],
@@ -27,10 +33,10 @@ class DoctorNearbySection extends ConsumerWidget {
               context.push('${AppRoutes.doctorDetail}/${doctors[index].idUser}');
             },
           ),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Erreur: $e')),
-      ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Erreur: $e')),
     );
   }
 }

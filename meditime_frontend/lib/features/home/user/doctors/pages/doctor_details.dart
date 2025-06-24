@@ -2,9 +2,14 @@ import 'dart:ui';
   import 'package:flutter/material.dart';
   import 'package:flutter_riverpod/flutter_riverpod.dart';
   import 'package:meditime_frontend/features/home/user/doctors/pages/providers/doctor_detail_provider.dart';
+import 'package:meditime_frontend/features/home/user/doctors/widgets/doctor_reviews_section.dart';
+import 'package:meditime_frontend/features/home/user/messages/widgets/message_detail_page.dart';
   import 'package:meditime_frontend/features/home/user/rdv/pages/provider/creneau_provider.dart';
   import 'package:meditime_frontend/features/home/user/rdv/pages/models/doctor_slot_model.dart';
 import 'package:meditime_frontend/features/home/user/rdv/widgets/rdv_bottom_sheet_content.dart';
+import 'package:meditime_frontend/providers/AuthNotifier.dart';
+import 'package:meditime_frontend/providers/rdv_provider.dart';
+import 'package:provider/provider.dart';
 
   class DoctorDetailPages extends ConsumerWidget {
     final int idUser;
@@ -12,6 +17,7 @@ import 'package:meditime_frontend/features/home/user/rdv/widgets/rdv_bottom_shee
 
     @override
     Widget build(BuildContext context, WidgetRef ref) {
+      final user = ref.watch(authProvider); // <-- Ajoute cette ligne
       final doctorAsync = ref.watch(doctorDetailProvider(idUser));
       return doctorAsync.when(
         loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -56,252 +62,264 @@ import 'package:meditime_frontend/features/home/user/rdv/widgets/rdv_bottom_shee
               SafeArea(
                 child: Align(
                   alignment: Alignment.bottomCenter,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Nom + certification (vers la gauche)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Flexible(
-                              child: RichText(
-                                text: TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: 'Dr. ${(doctor.user?.firstName ?? '').trim()} ${(doctor.user?.lastName ?? '').trim()}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 28,
-                                        shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
-                                      ),
-                                    ),
-                                    WidgetSpan(
-                                      alignment: PlaceholderAlignment.middle,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(left: 8), // petit espace si tu veux
-                                        child: Icon(Icons.verified, color: Colors.lightBlueAccent, size: 28),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        // Description
-                        if (doctor.description != null && doctor.description!.isNotEmpty)
-                          _DoctorDescription(description: doctor.description!),
-                        // Section stats
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.18),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              // Rating
-                              Column(
+                  child: FractionallySizedBox(
+                    heightFactor: 0.85,
+                    widthFactor: 1,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      ),
+                      child: Column(
+                        children: [
+                          // Le contenu principal scrollable
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.star, color: Colors.amber, size: 28),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    doctor.note.toStringAsFixed(1),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  const Text("Note", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                                ],
-                              ),
-                              // Patients examinés
-                              Column(
-                                children: [
-                                  const Icon(Icons.people, color: Colors.white, size: 26),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    doctor.patientsExamined?.toString() ?? '—',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  const Text("Patients", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                                ],
-                              ),
-                              // Années d'expérience
-                              Column(
-                                children: [
-                                  const Icon(Icons.work, color: Colors.white, size: 26),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    doctor.experienceYears?.toString() ?? '—',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  const Text("Expérience", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                                ],
-                              ),
-                              // Prix par heure
-                              Column(
-                                children: [
-                                  const Icon(Icons.attach_money, color: Colors.greenAccent, size: 26),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    doctor.pricePerHour != null ? "${doctor.pricePerHour} FCFA" : '—',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  const Text("Prix/h", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 18),
-                        // Section créneaux disponibles
-                        Text(
-                          "Créneaux disponibles",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        ref.watch(activeDoctorTimeslotsProvider(doctor.id)).when(
-                          data: (slots) {
-                            if (slots.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  "Aucun créneau disponible pour ce médecin.",
-                                  style: TextStyle(color: Colors.white70),
-                                ),
-                              );
-                            }
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: slots.map((slot) => 
-                                      Container(
-                                        width: 260,
-                                        margin: const EdgeInsets.only(right: 16),
-                                        child: Card(
-                                          color: Colors.white.withOpacity(0.15),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(16),
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  "Du : ${_formatDate(slot.startDay)} à ${_formatHour(slot.startHour, slot.startMinute)}",
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 16,
-                                                  ),
+                                  // Nom + certification (vers la gauche)
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Flexible(
+                                        child: RichText(
+                                          text: TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                text: 'Dr. ${(doctor.user?.firstName ?? '').trim()} ${(doctor.user?.lastName ?? '').trim()}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 28,
+                                                  shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
                                                 ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  "Au : ${_formatDate(slot.endDay)} à ${_formatHour(slot.endHour, slot.endMinute)}",
-                                                  style: const TextStyle(
-                                                    color: Colors.white70,
-                                                    fontSize: 15,
-                                                  ),
+                                              ),
+                                              WidgetSpan(
+                                                alignment: PlaceholderAlignment.middle,
+                                                child: Padding(
+                                                  padding: const EdgeInsets.only(left: 8),
+                                                  child: Icon(Icons.verified, color: Colors.lightBlueAccent, size: 28),
                                                 ),
-                                              ],
+                                              ),
+                                            ],
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  // Description
+                                  if (doctor.description != null && doctor.description!.isNotEmpty)
+                                    _DoctorDescription(description: doctor.description!),
+                                  // Section stats
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.18),
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        // Rating
+                                        Column(
+                                          children: [
+                                            const Icon(Icons.star, color: Colors.amber, size: 28),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              doctor.note.toStringAsFixed(1),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            const Text("Note", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                          ],
+                                        ),
+                                        // Patients examinés
+                                        Column(
+                                          children: [
+                                            const Icon(Icons.people, color: Colors.white, size: 26),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              doctor.patientsExamined?.toString() ?? '—',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            const Text("Patients", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                          ],
+                                        ),
+                                        // Années d'expérience
+                                        Column(
+                                          children: [
+                                            const Icon(Icons.work, color: Colors.white, size: 26),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              doctor.experienceYears?.toString() ?? '—',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            const Text("Expérience", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                          ],
+                                        ),
+                                        // Prix par heure
+                                        Column(
+                                          children: [
+                                            const Icon(Icons.attach_money, color: Colors.greenAccent, size: 26),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              doctor.pricePerHour != null ? "${doctor.pricePerHour} FCFA" : '—',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            const Text("Prix/h", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  DoctorReviewsSection(doctorId: doctor.id),
+                                  const SizedBox(height: 18),
+                                  // Section créneaux disponibles
+                                  Text(
+                                    "Créneaux disponibles",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ref.watch(activeDoctorTimeslotsProvider(doctor.id)).when(
+                                    data: (slots) {
+                                      if (slots.isEmpty) {
+                                        return const Center(
+                                          child: Text(
+                                            "Aucun créneau disponible pour ce médecin.",
+                                            style: TextStyle(color: Colors.white70),
+                                          ),
+                                        );
+                                      }
+                                      return Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          SingleChildScrollView(
+                                            scrollDirection: Axis.horizontal,
+                                            child: Row(
+                                              children: slots.map((slot) => 
+                                                Container(
+                                                  width: 260,
+                                                  margin: const EdgeInsets.only(right: 16),
+                                                  child: Card(
+                                                    color: Colors.white.withOpacity(0.15),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(16),
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            "Du : ${_formatDate(slot.startDay)} à ${_formatHour(slot.startHour, slot.startMinute)}",
+                                                            style: const TextStyle(
+                                                              color: Colors.white,
+                                                              fontWeight: FontWeight.bold,
+                                                              fontSize: 16,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(height: 6),
+                                                          Text(
+                                                            "Au : ${_formatDate(slot.endDay)} à ${_formatHour(slot.endHour, slot.endMinute)}",
+                                                            style: const TextStyle(
+                                                              color: Colors.white70,
+                                                              fontSize: 15,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                              ).toList(),
                                             ),
                                           ),
+                                          const SizedBox(height: 18),
+                                        ],
+                                      );
+                                    },
+                                    loading: () => const Center(child: CircularProgressIndicator()),
+                                    error: (e, _) => Center(child: Text('Erreur: $e', style: const TextStyle(color: Colors.red))),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Les boutons toujours en bas
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: Colors.white,
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                                         ),
-                                      )
-                                    ).toList(),
+                                        builder: (context) => Padding(
+                                          padding: EdgeInsets.only(
+                                            bottom: MediaQuery.of(context).viewInsets.bottom,
+                                          ),
+                                          child: FractionallySizedBox(
+                                            heightFactor: 0.85,
+                                            child: RdvBottomSheetContent(selectedDoctor: doctor),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.calendar_today, color: Colors.white),
+                                    label: const Text("Prendre RDV"),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blueAccent,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 18),
-                              ],
-                            );
-                          },
-                          loading: () => const Center(child: CircularProgressIndicator()),
-                          error: (e, _) => Center(child: Text('Erreur: $e', style: const TextStyle(color: Colors.red))),
-                        ),
-                        
-                        const SizedBox(height: 10),
-                        // Section actions
-                        Row(
-                          children: [
-                            // Prendre RDV à gauche (large)
-                            Expanded(
-                              flex: 2,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.white,
-                                    shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                                    ),
-                                    builder: (context) => Padding(
-                                      padding: EdgeInsets.only(
-                                        bottom: MediaQuery.of(context).viewInsets.bottom,
-                                      ),
-                                      child: FractionallySizedBox(
-                                        heightFactor: 0.85,
-                                        child: RdvBottomSheetContent(selectedDoctor: doctor),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.calendar_today, color: Colors.white),
-                                label: const Text("Prendre RDV"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blueAccent,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                const SizedBox(width: 16),
+                                // Bouton Message
+                                _DoctorMessageButton(
+                                  ref: ref,
+                                  patientId: user!.idUser,
+                                  doctorId: doctor.idUser,
+                                  doctorName: 'Dr. ${(doctor.user?.lastName ?? '')} ${(doctor.user?.firstName ?? '')}',
                                 ),
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: 16),
-                            // Noter à droite (icône étoile)
-                            ElevatedButton(
-                              onPressed: () {
-                                // TODO: ouvrir le dialog de notation
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.deepPurple,
-                                padding: const EdgeInsets.all(16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: const Icon(Icons.star, color: Colors.white, size: 28),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -660,3 +678,81 @@ class _SlotPickerState extends State<SlotPicker> {
   String _formatHour(int hour, int minute) {
     return "${hour.toString().padLeft(2, '0')}h${minute.toString().padLeft(2, '0')}";
   }
+
+  class _DoctorMessageButton extends StatefulWidget {
+  final WidgetRef ref;
+  final int patientId;
+  final int doctorId;
+  final String doctorName;
+  const _DoctorMessageButton({
+    required this.ref,
+    required this.patientId,
+    required this.doctorId,
+    required this.doctorName,
+    super.key,
+  });
+
+  @override
+  State<_DoctorMessageButton> createState() => _DoctorMessageButtonState();
+}
+
+class _DoctorMessageButtonState extends State<_DoctorMessageButton> {
+  late Future<bool> _hasRdvFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Utilise ref.read au lieu de context.read
+    _hasRdvFuture = widget.ref.read(rdvServiceProvider).hasPatientHadRdvWithDoctorFast(
+      patientId: widget.patientId,
+      doctorId: widget.doctorId,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _hasRdvFuture,
+      builder: (context, snapshot) {
+        final hasRdv = snapshot.data ?? false;
+        return ElevatedButton.icon(
+          onPressed: hasRdv
+              ? () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => MessageDetailPage(
+                        senderName: widget.doctorName,
+                        messageContent: '',
+                        time: '',
+                        receiverId: widget.doctorId,
+                      ),
+                    ),
+                  );
+                }
+              : () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text("Messagerie indisponible"),
+                      content: const Text("Vous devez avoir pris au moins un rendez-vous avec ce médecin pour pouvoir lui envoyer un message."),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text("OK"),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+          icon: const Icon(Icons.message, color: Colors.white),
+          label: const Text("Message"),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: hasRdv ? Colors.deepPurple : Colors.grey,
+            padding: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      },
+    );
+  }
+}

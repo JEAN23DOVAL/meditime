@@ -1,4 +1,6 @@
 const DoctorApplication = require('../models/doctor_application_model');
+const formatPhotoUrl = require('../utils/formatPhotoUrl');
+const { emitToAdmins, emitToUser } = require('../utils/wsEmitter');
 
 const submitDoctorApplication = async (req, res) => {
   try {
@@ -37,6 +39,9 @@ const submitDoctorApplication = async (req, res) => {
       status: 'pending'
     });
 
+    // Après soumission
+    emitToAdmins(req.app, 'doctor_application_update', { type: 'new', application: newApp });
+
     res.status(201).json({ message: 'Demande envoyée avec succès', application: newApp });
   } catch (error) {
     console.error(error);
@@ -51,7 +56,17 @@ const getLastApplication = async (req, res) => {
       where: { idUser },
       order: [['created_at', 'DESC']]
     });
-    res.json(lastApp);
+    if (lastApp) {
+      const app = lastApp.toJSON();
+      app.cni_front = app.cni_front ? formatPhotoUrl(app.cni_front, req, 'doctor_application') : null;
+      app.cni_back = app.cni_back ? formatPhotoUrl(app.cni_back, req, 'doctor_application') : null;
+      app.certification = app.certification ? formatPhotoUrl(app.certification, req, 'doctor_application') : null;
+      app.cv_pdf = app.cv_pdf ? formatPhotoUrl(app.cv_pdf, req, 'doctor_application') : null;
+      app.casier_judiciaire = app.casier_judiciaire ? formatPhotoUrl(app.casier_judiciaire, req, 'doctor_application') : null;
+      res.json(app);
+    } else {
+      res.status(404).json({ message: 'Aucune demande trouvée.' });
+    }
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur' });
   }

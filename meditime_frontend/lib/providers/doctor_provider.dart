@@ -1,6 +1,41 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meditime_frontend/models/doctor_reviews_model.dart';
 import '../models/doctor_model.dart';
 import '../services/doctor_services.dart';
+import 'package:meditime_frontend/services/doctor_reviews_service.dart';
+
+// Providers pour chaque filtre
+final doctorSearchProvider = StateProvider<String?>((ref) => null);
+final doctorAvailableProvider = StateProvider<bool?>((ref) => null);
+final doctorMinPriceProvider = StateProvider<double?>((ref) => null);
+final doctorMaxPriceProvider = StateProvider<double?>((ref) => null);
+final doctorGenderProvider = StateProvider<String?>((ref) => null);
+
+// Provider pour la recherche avancée
+final advancedDoctorsProvider = FutureProvider<List<Doctor>>((ref) async {
+  final service = ref.read(doctorServiceProvider);
+  final search = ref.watch(doctorSearchProvider);
+  final available = ref.watch(doctorAvailableProvider);
+  final minPrice = ref.watch(doctorMinPriceProvider);
+  final maxPrice = ref.watch(doctorMaxPriceProvider);
+  final gender = ref.watch(doctorGenderProvider);
+
+  if (search == null &&
+      available == null &&
+      minPrice == null &&
+      maxPrice == null &&
+      gender == null) {
+    return await service.fetchBestDoctors();
+  }
+
+  return await service.searchDoctors(
+    search: search,
+    available: available,
+    minPrice: minPrice,
+    maxPrice: maxPrice,
+    gender: gender,
+  );
+});
 
 final doctorServiceProvider = Provider((ref) => DoctorService());
 
@@ -16,28 +51,9 @@ final doctorListProvider = Provider<List<Doctor>>((ref) => [
   // Ou remplacer par un FutureProvider si tu veux charger depuis l'API
 ]);
 
-// Providers pour la recherche et le filtre
-final doctorSearchProvider = StateProvider<String>((ref) => '');
-final doctorFilterProvider = StateProvider<String>((ref) => '');
-
-// Provider pour filtrer la liste selon recherche/filtre
-final filteredDoctorsProvider = Provider<List<Doctor>>((ref) {
-  final doctors = ref.watch(doctorListProvider);
-  final search = ref.watch(doctorSearchProvider).toLowerCase();
-  final filter = ref.watch(doctorFilterProvider);
-
-  return doctors.where((doc) {
-    final matchesSearch = doc.specialite.toLowerCase().contains(search) ||
-        (doc.user?.firstName?.toLowerCase().contains(search) ?? false) ||
-        (doc.user?.lastName.toLowerCase().contains(search) ?? false);
-    final matchesFilter = filter.isEmpty || doc.specialite == filter;
-    return matchesSearch && matchesFilter;
-  }).toList();
+final doctorReviewsProvider = FutureProvider.family<List<DoctorReview>, int>((ref, doctorId) async {
+  final service = ref.read(doctorReviewServiceProvider);
+  return await service.fetchReviewsByDoctor(doctorId);
 });
 
-// Provider pour les médecins triés par proximité/ville
-final doctorNearbyProvider = FutureProvider.family<List<Doctor>, String?>((ref, city) async {
-  final service = ref.read(doctorServiceProvider);
-  // Si tu veux utiliser la méthode fetchDoctorsByProximity, adapte-la pour prendre la ville
-  return await service.fetchDoctorsByProximityWithCity(ref, city);
-});
+final doctorReviewServiceProvider = Provider<DoctorReviewService>((ref) => DoctorReviewService());

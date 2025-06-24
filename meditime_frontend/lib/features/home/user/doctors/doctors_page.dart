@@ -9,21 +9,19 @@ import 'package:meditime_frontend/features/home/user/doctors/widgets/doctor_sear
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
 import 'package:meditime_frontend/providers/doctor_provider.dart';
 
-class DoctorPage extends ConsumerWidget {
+class DoctorPage extends ConsumerStatefulWidget {
   const DoctorPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = GoRouterState.of(context);
-    final args = state.extra as Map?;
-    final patientCity = args?['patientCity'] as String?;
-    final excludeDoctorId = args?['excludeDoctorId'] as int?;
+  ConsumerState<DoctorPage> createState() => _DoctorPageState();
+}
 
-    // Récupère l'utilisateur connecté
-    final user = ref.watch(authProvider);
+class _DoctorPageState extends ConsumerState<DoctorPage> {
+  void Function()? resetFiltersCallback;
 
-    // Utilise le provider asynchrone pour charger les médecins triés
-    final doctorsAsync = ref.watch(doctorNearbyProvider(patientCity));
+  @override
+  Widget build(BuildContext context) {
+    final doctorsAsync = ref.watch(advancedDoctorsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -33,42 +31,43 @@ class DoctorPage extends ConsumerWidget {
         centerTitle: true,
         elevation: 0,
       ),
-      body: doctorsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Erreur: $e')),
-        data: (doctors) {
-          // Exclure le médecin connecté si besoin
-          final filteredDoctors = doctors.where((d) {
-            // Exclure si l'utilisateur est médecin et que son idUser correspond
-            if (user != null && user.role == 'doctor' && d.idUser == user.idUser) return false;
-            // Exclure aussi si excludeDoctorId est passé en argument
-            if (excludeDoctorId != null && d.idUser == excludeDoctorId) return false;
-            return true;
-          }).toList();
-
-          return Column(
-            children: [
-              DoctorSearchBar(
-                onChanged: (value) => ref.read(doctorSearchProvider.notifier).state = value,
+      body: Column(
+        children: [
+          DoctorSearchBar(
+            onChanged: (value) {
+              ref.read(doctorSearchProvider.notifier).state = value.isEmpty ? null : value;
+            },
+          ),
+          DoctorFiltersRow(
+            initialAvailable: false,
+            onAvailableChanged: (value) {
+              ref.read(doctorAvailableProvider.notifier).state = value;
+            },
+            onPriceRangeChanged: (range) {
+              ref.read(doctorMinPriceProvider.notifier).state = range.start > 0 ? range.start : null;
+              ref.read(doctorMaxPriceProvider.notifier).state = range.end < 100000 ? range.end : null;
+            },
+            onGenderChanged: (value) {
+              ref.read(doctorGenderProvider.notifier).state = value;
+            },
+            onResetFilters: (reset) => resetFiltersCallback = reset,
+          ),
+          Expanded(
+            child: doctorsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Erreur: $e')),
+              data: (doctors) => DoctorList(
+                doctors: doctors,
+                onBook: (doctor) {
+                  Navigator.pop(context, doctor);
+                },
+                onTap: (doctor) {
+                  context.go('${AppRoutes.doctorDetail}/${doctor.idUser}');
+                },
               ),
-              DoctorFiltersRow(
-                onFilterSelected: (filter) => ref.read(doctorFilterProvider.notifier).state = filter,
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: DoctorList(
-                  doctors: filteredDoctors,
-                  onBook: (doctor) {
-                    Navigator.pop(context, doctor);
-                  },
-                  onTap: (doctor) {
-                    context.go('${AppRoutes.doctorDetail}/${doctor.idUser}');
-                  },
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }

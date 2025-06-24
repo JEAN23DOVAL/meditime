@@ -1,0 +1,63 @@
+// filepath: lib/features/home/admin/appointments/appointment_list_screen.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meditime_frontend/providers/rdv_provider.dart';
+import 'package:meditime_frontend/models/rdv_model.dart';
+import 'package:meditime_frontend/configs/app_routes.dart';
+import 'package:meditime_frontend/widgets/utils/loading_indicator.dart';
+
+class AppointmentListScreen extends ConsumerWidget {
+  const AppointmentListScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rdvsAsync = ref.watch(rdvListProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Manage Appointments'),
+      ),
+      body: rdvsAsync.when(
+        data: (rdvs) {
+          if (rdvs.isEmpty) {
+            return const Center(child: Text('No appointments found.'));
+          }
+          return ListView.builder(
+            itemCount: rdvs.length,
+            itemBuilder: (context, index) {
+              final rdv = rdvs[index];
+              return AppointmentCard(rdv: rdv);
+            },
+          );
+        },
+        loading: () => const LoadingIndicator(),
+        error: (error, stack) => Center(child: Text('Error: $error')),
+      ),
+    );
+  }
+}
+
+class AppointmentCard extends StatelessWidget {
+  final Rdv rdv;
+
+  const AppointmentCard({Key? key, required this.rdv}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: ListTile(
+        title: Text('Appointment with ${rdv.doctor?.lastName ?? 'Unknown Doctor'}'),
+        subtitle: Text('Date: ${rdv.date.toLocal()}'),
+        trailing: Text(rdv.status),
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.rdvPage,
+            arguments: rdv.id, // Pass the appointment ID to the details page
+          );
+        },
+      ),
+    );
+  }
+}

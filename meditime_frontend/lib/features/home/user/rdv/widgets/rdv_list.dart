@@ -8,7 +8,18 @@ class RdvListParams {
   final int? patientId;
   final int? doctorId;
   final String filter;
-  const RdvListParams({this.patientId, this.doctorId, this.filter = 'all'});
+  final String? search;
+  final String? sortBy;
+  final String? order;
+
+  const RdvListParams({
+    this.patientId,
+    this.doctorId,
+    this.filter = 'all',
+    this.search,
+    this.sortBy,
+    this.order,
+  });
 
   @override
   bool operator ==(Object other) =>
@@ -17,10 +28,19 @@ class RdvListParams {
           runtimeType == other.runtimeType &&
           patientId == other.patientId &&
           doctorId == other.doctorId &&
-          filter == other.filter;
+          filter == other.filter &&
+          search == other.search &&
+          sortBy == other.sortBy &&
+          order == other.order;
 
   @override
-  int get hashCode => patientId.hashCode ^ doctorId.hashCode ^ filter.hashCode;
+  int get hashCode =>
+      patientId.hashCode ^
+      doctorId.hashCode ^
+      filter.hashCode ^
+      (search?.hashCode ?? 0) ^
+      (sortBy?.hashCode ?? 0) ^
+      (order?.hashCode ?? 0);
 }
 
 class RdvList extends ConsumerWidget {
@@ -54,18 +74,16 @@ class RdvList extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Erreur: $e')),
       data: (rdvs) {
-        for (final rdv in rdvs) {
-          print('ALL RDV status: "${rdv.status}" patientId: ${rdv.patientId}');
-        }
+        // Si une recherche est active, n'applique pas le filtre status côté front
+        final bool isSearching = params.search != null && params.search!.isNotEmpty;
         final filtered = rdvs.where((rdv) {
-          // Filtrage selon le rôle
-          if (params.doctorId != null) {
-            if (rdv.doctorId != params.doctorId) return false;
+          if (params.doctorId != null && rdv.doctorId != params.doctorId) return false;
+          if (params.patientId != null && rdv.patientId != params.patientId) return false;
+          // Si recherche, ne filtre pas par status côté front
+          if (!isSearching) {
+            return rdvMatchesTab(params.filter, rdv.status);
           }
-          if (params.patientId != null) {
-            if (rdv.patientId != params.patientId) return false;
-          }
-          return rdvMatchesTab(filter, rdv.status);
+          return true;
         }).toList();
 
         if (filtered.isEmpty) {
@@ -79,10 +97,10 @@ class RdvList extends ConsumerWidget {
           itemCount: filtered.length,
           itemBuilder: (context, i) {
             final rdv = filtered[i];
-            print('RDV status: "${rdv.status}"'); // <-- Ajoute ceci
             return RdvCard(
               rdv: rdv,
               user: user,
+              ref: ref,
               onCancel: rdv.status == 'upcoming'
                   ? () {
                       // Appelle le service pour annuler
@@ -110,7 +128,8 @@ bool rdvMatchesTab(String filter, String status) {
     case 'cancelled':
       return status == 'cancelled';
     case 'no_show':
-      return status == 'no_show' || status == 'doctor_no_show' || status == 'expired';
+      // Affiche tous les statuts d'absence dans "Non honoré"
+      return status == 'no_show' || status == 'doctor_no_show' || status == 'expired' || status == 'both_no_show';
     case 'all':
     default:
       return true;
