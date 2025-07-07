@@ -36,12 +36,28 @@ class RdvService {
     return Rdv.fromJson(response.data);
   }
 
-  Future<Rdv> createRdv(Rdv rdv) async {
+  /* Future<Map<String, dynamic>> createRdv(Rdv rdv) async {
     final response = await _dio.post(ApiConstants.rdv, data: rdv.toJson());
     if (response.statusCode == 201) {
-      return Rdv.fromJson(response.data);
+      final data = response.data;
+      return {
+        'paymentUrl': data['paymentUrl'],
+        'rdv': data['rdv'] != null ? Rdv.fromJson(data['rdv']) : null,
+      };
     }
     throw Exception(response.data['message'] ?? 'Erreur lors de la création du RDV');
+  } */
+
+  Future<Map<String, dynamic>> createRdv(Rdv rdv) async {
+    final response = await _dio.post(ApiConstants.paymentInitiate, data: rdv.toJson());
+    if (response.statusCode == 200) {
+      final data = response.data;
+      return {
+        'paymentUrl': data['paymentUrl'],
+        'transactionId': data['transactionId'],
+      };
+    }
+    throw Exception(response.data['message'] ?? 'Erreur lors de la création du paiement');
   }
 
   Future<Rdv> updateRdv(Rdv rdv) async {

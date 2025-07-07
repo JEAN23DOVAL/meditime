@@ -4,7 +4,7 @@ const { createRdv, getAllRdvs, getRdvById, updateRdv, deleteRdv, getAvailableSlo
 const authMiddleware = require('../middlewares/authMiddleware');
 
 // Créer un rendez-vous
-router.post('/', authMiddleware, createRdv);
+// router.post('/', authMiddleware, createRdv);
 
 // Récupérer tous les rendez-vous (optionnel : ?patient_id=...&doctor_id=...)
 router.get('/', authMiddleware, getAllRdvs);

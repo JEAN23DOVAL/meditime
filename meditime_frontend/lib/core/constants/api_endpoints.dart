@@ -20,7 +20,7 @@ class ApiConstants {
       _isPhysicalAndroid = androidInfo.isPhysicalDevice ?? false; // Ajoute cette ligne
       if (_isPhysicalAndroid == true) {
         // Téléphone réel Android
-        _baseUrl = "http://192.168.213.20:3000/api"; // <-- Mets ici l'IP de ton PC
+        _baseUrl = "http://10.197.212.230:3000/api"; // <-- Mets ici l'IP de ton PC
       } else {
         // Émulateur Android
         _baseUrl = "http://10.0.2.2:3000/api";
@@ -31,13 +31,13 @@ class ApiConstants {
       final deviceInfo = DeviceInfoPlugin();
       final iosInfo = await deviceInfo.iosInfo;
       if (iosInfo.isPhysicalDevice ?? false) {
-        _baseUrl = "http://192.168.213.20:3000/api"; // <-- Mets ici l'IP de ton PC
+        _baseUrl = "http://10.197.212.230:3000/api"; // <-- Mets ici l'IP de ton PC
       } else {
         _baseUrl = "http://localhost:3000/api";
       }
       return;
     }
-    _baseUrl = "http://192.168.213.20:3000/api";
+    _baseUrl = "http://10.197.212.230:3000/api";
   }
 
   static String get baseUrl {
@@ -107,6 +107,7 @@ class ApiConstants {
 
   // --- RDV & Créneaux ---
   static String get rdv => "$baseUrl/rdv";
+  static String get paymentInitiate => "$baseUrl/payments/initiate";
   static String get createDoctorSlot => "$baseUrl/rdv/slots";
   static String get getDoctorSlots => "$baseUrl/doctor-slots/doctor";
   static String get getActiveDoctorSlots => "$baseUrl/rdv/slots/active";
@@ -129,12 +130,12 @@ class ApiConstants {
       // ATTENTION : DeviceInfoPlugin().androidInfo est async, donc il faut stocker le résultat au démarrage
       // Pour rester synchrone ici, on va utiliser une variable statique initialisée dans initBaseUrl()
       if (_isPhysicalAndroid == true) {
-        return "http://192.168.213.20:3000/uploads"; // <-- Mets ici l'IP de ton PC
+        return "http://10.197.212.230:3000/uploads"; // <-- Mets ici l'IP de ton PC
       }
       return "http://10.0.2.2:3000/uploads";
     }
     if (Platform.isIOS) return "http://localhost:3000/uploads";
-    return "http://192.168.213.20:3000/uploads";
+    return "http://10.197.212.230:3000/uploads";
   }
 
   /// Génère une URL d'upload pour un chemin donné.
@@ -163,6 +164,6 @@ class ApiConstants {
     'Accept': 'application/json',
   };
 
-  static const int connectionTimeout = 5000;
-  static const int receiveTimeout = 3000;
+  static const int connectionTimeout = 10000;
+  static const int receiveTimeout = 15000;
 }

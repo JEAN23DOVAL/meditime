@@ -9,6 +9,10 @@ const Rdv = require('./rdv_model');
 const DoctorReview = require('./doctor_review_model'); // Ajoute cette ligne
 const Admin = require('./admin_model');
 const RdvReminderSent = require('./rdv_reminder_sent_model');
+const Payment = require('./payment_model');
+const Refund = require('./refund_model');
+const Transaction = require('./transaction_model');
+const Fee = require('./fee_model');
 
 // User associations
 User.hasMany(DoctorApplication, { foreignKey: 'idUser', as: 'applications' });
@@ -77,6 +81,19 @@ Rdv.hasOne(Consultation, {
 Rdv.hasMany(RdvReminderSent, { foreignKey: 'rdv_id', as: 'remindersSent' });
 RdvReminderSent.belongsTo(Rdv, { foreignKey: 'rdv_id', as: 'rdv' });
 
+// Paiement associations
+Payment.belongsTo(Rdv, { foreignKey: 'rdv_id', as: 'rdv' });
+Payment.belongsTo(User, { foreignKey: 'patient_id', as: 'paymentPatient' });
+Payment.belongsTo(User, { foreignKey: 'doctor_id', as: 'paymentDoctor' });
+Payment.hasMany(Refund, { foreignKey: 'payment_id', as: 'refunds' });
+Payment.hasMany(Transaction, { foreignKey: 'payment_id', as: 'transactions' });
+Payment.hasMany(Fee, { foreignKey: 'payment_id', as: 'fees' });
+
+Refund.belongsTo(Payment, { foreignKey: 'payment_id', as: 'payment' });
+Transaction.belongsTo(Payment, { foreignKey: 'payment_id', as: 'payment' });
+Transaction.belongsTo(User, { foreignKey: 'doctor_id', as: 'doctor' });
+Fee.belongsTo(Payment, { foreignKey: 'payment_id', as: 'payment' });
+
 // User associations inverses
 User.hasMany(Rdv, {
   foreignKey: 'patient_id',
@@ -109,4 +126,8 @@ module.exports = {
   DoctorReview,
   Admin,
   RdvReminderSent,
+  Payment,
+  Refund,
+  Transaction,
+  Fee,
 };

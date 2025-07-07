@@ -31,6 +31,7 @@ import 'package:meditime_frontend/features/auth/forgot_password_screen.dart';
 import 'package:meditime_frontend/features/auth/inscription_1_screen.dart';
 import 'package:meditime_frontend/providers/first_launch_provider.dart';
 import 'package:meditime_frontend/configs/app_routes.dart';
+import 'package:meditime_frontend/widgets/payment_webview.dart';
 import 'package:meditime_frontend/widgets/utils/go_router_refresh_stream.dart';
 import 'package:meditime_frontend/widgets/transition/fade_transition_page.dart';
 import 'package:meditime_frontend/features/home/admin/messages/admin_messages_page.dart';
@@ -372,6 +373,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           child: const DocumentsPage(),
           key: state.pageKey,
         ),
+      ),
+      GoRoute(
+        path: '/payment_webview',
+        pageBuilder: (context, state) {
+          final url = (state.extra as Map)['url'] as String;
+          final transactionId = (state.extra as Map)['transactionId'] as String;
+          return buildFadeTransitionPage(
+            child: PaymentWebView(
+              url: url,
+              transactionId: transactionId,
+            ),
+            key: state.pageKey,
+          );
+        },
       ),
     ],
   );

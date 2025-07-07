@@ -11,10 +11,12 @@ import 'package:meditime_frontend/models/rdv_model.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
 import 'package:intl/intl.dart';
 import 'package:meditime_frontend/providers/rdv_provider.dart';
+import 'package:meditime_frontend/widgets/payment_webview.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RdvBottomSheetContent extends ConsumerStatefulWidget {
   final Doctor? selectedDoctor;
-  final Rdv? initialRdv; // <-- Ajoute ce champ
+  final Rdv? initialRdv;
 
   const RdvBottomSheetContent({super.key, this.selectedDoctor, this.initialRdv});
 
@@ -32,7 +34,6 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
   void initState() {
     super.initState();
     if (widget.initialRdv != null) {
-      // Ne pré-remplit PAS le médecin car on n'a pas l'objet Doctor
       selectedDoctor = widget.selectedDoctor;
       selectedTimeslot = widget.initialRdv!.date;
       motif = widget.initialRdv!.motif;
@@ -91,8 +92,8 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                     final slot = slots[index];
                     final isSelected = selectedTimeslot == slot.start;
                     final isToday = DateTime.now().day == slot.start.day &&
-                                    DateTime.now().month == slot.start.month &&
-                                    DateTime.now().year == slot.start.year;
+                        DateTime.now().month == slot.start.month &&
+                        DateTime.now().year == slot.start.year;
                     return InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: slot.isTaken
@@ -310,6 +311,33 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                         decoration: const InputDecoration(labelText: 'Motif du rendez-vous'),
                         onChanged: (v) => motif = v,
                       ),
+                      const SizedBox(height: 16),
+
+                      // Affichage du montant minimum à payer
+                      if (selectedDoctor != null && selectedDoctor!.pricePerHour != null)
+                        Builder(
+                          builder: (context) {
+                            final int price = selectedDoctor!.pricePerHour!;
+                            final int platformFee = calculatePlatformFee(price);
+                            return Card(
+                              color: Colors.green[50],
+                              margin: const EdgeInsets.only(bottom: 16),
+                              child: ListTile(
+                                leading: const Icon(Icons.payments, color: Colors.green),
+                                title: Text(
+                                  'Montant minimum à payer',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Text(
+                                  'Pour réserver ce rendez-vous, vous devez payer au moins :\n'
+                                  '${platformFee.toString()} XAF (commission plateforme)\n'
+                                  'Prix total consultation : ${price.toString()} XAF',
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       const SizedBox(height: 80), // Pour laisser la place au bouton
                     ],
                   ),
@@ -326,6 +354,7 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                             final user = ref.read(authProvider);
                             if (user == null) return;
 
+                            // Affiche le loader
                             showDialog(
                               context: context,
                               barrierDismissible: false,
@@ -348,39 +377,44 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                                 doctor: null,
                               );
                               final rdvService = ref.read(rdvServiceProvider);
+
                               if (widget.initialRdv != null) {
                                 await rdvService.updateRdv(rdv);
-                              } else {
-                                await rdvService.createRdv(rdv);
-                              }
-
-                              if (mounted) {
-                                // Invalide chaque tab explicitement
-                                for (final filter in ['upcoming', 'completed', 'cancelled', 'no_show']) {
-                                  ref.invalidate(rdvListProvider(RdvListParams(
-                                    patientId: user.idUser,
-                                    doctorId: null,
-                                    filter: filter,
-                                  )));
-                                }
-                                // Invalide aussi le "prochain RDV"
-                                ref.invalidate(nextPatientRdvProvider);
-
-                                // Ferme le bottom sheet
-                                while (Navigator.of(context, rootNavigator: true).canPop()) {
-                                  Navigator.of(context, rootNavigator: true).pop();
-                                }
+                                Navigator.of(context, rootNavigator: true).pop(); // Ferme le loader
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Rendez-vous reprogrammé avec succès !')),
+                                );
                                 Future.delayed(const Duration(milliseconds: 300), () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(widget.initialRdv != null
-                                        ? 'Rendez-vous reprogrammé avec succès !'
-                                        : 'Rendez-vous réservé avec succès !')),
-                                  );
+                                  if (mounted) Navigator.of(context, rootNavigator: true).pop();
                                 });
+                              } else {
+                                final result = await rdvService.createRdv(rdv);
+                                final paymentUrl = result['paymentUrl'];
+                                final transactionId = result['transactionId'];
+
+                                Navigator.of(context, rootNavigator: true).pop(); // Ferme le bottom sheet
+                                await Future.delayed(const Duration(milliseconds: 100));
+
+                                if (paymentUrl != null) {
+                                  // Utilise le context de la page principale (celui du bottom sheet est encore valide ici)
+                                  if (context.mounted) {
+                                    context.push(
+                                      '/payment_webview',
+                                      extra: {
+                                        'url': paymentUrl,
+                                        'transactionId': transactionId,
+                                      },
+                                    );
+                                  }
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Erreur lors de la génération du paiement.')),
+                                  );
+                                }
                               }
                             } catch (e) {
+                              Navigator.of(context, rootNavigator: true).pop();
                               if (mounted) {
-                                Navigator.of(context, rootNavigator: true).pop();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Erreur lors de la réservation : $e')),
                                 );
@@ -399,13 +433,11 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
     );
   }
 
-  Future<void> _closeAndGoToRdvPage(BuildContext context) async {
-    // Ferme tous les dialogs/bottom sheets ouverts
-    while (Navigator.of(context, rootNavigator: true).canPop()) {
-      Navigator.of(context, rootNavigator: true).pop();
-    }
-    // Navigue vers la page RDV (remplace toute la stack si besoin)
-    context.go(AppRoutes.rdvPage);
+  int calculatePlatformFee(int price) {
+    if (price <= 10000) return 1000;
+    if (price <= 20000) return (price * 0.10).round();
+    if (price <= 50000) return (price * 0.08).round();
+    return (price * 0.05).round();
   }
 }
 

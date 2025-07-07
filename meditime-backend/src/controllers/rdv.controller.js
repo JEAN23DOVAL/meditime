@@ -8,6 +8,9 @@ const formatPhotoUrl = require('../utils/formatPhotoUrl');
 const { sendFcmToUser } = require('../utils/fcm');
 const { notifyRdvStatus } = require('../utils/rdvNotification');
 const { emitToUser } = require('../utils/wsEmitter'); 
+const { calculatePaymentShares } = require('../utils/paymentCalculation');
+const Payment = require('../models/payment_model');
+const axios = require('axios');
 
 // Créer un rendez-vous
 const createRdv = async (req, res) => {
@@ -44,6 +47,15 @@ const createRdv = async (req, res) => {
       return res.status(409).json({ message: "Ce créneau est déjà réservé chez ce médecin." });
     }
 
+    // Récupère le médecin et son tarif
+    const doctor = await Doctor.findOne({ where: { idUser: doctor_id } });
+    if (!doctor) return res.status(404).json({ message: 'Médecin introuvable' });
+    const price = doctor.pricePerHour;
+
+    // Calcule les parts
+    const shares = calculatePaymentShares(price);
+
+    // Crée le RDV en pending (sera confirmé après paiement)
     const rdv = await Rdv.create({
       patient_id,
       doctor_id,
@@ -54,22 +66,51 @@ const createRdv = async (req, res) => {
       status: 'pending'
     });
 
-    // Recharge le RDV avec les associations patient et doctor
-    const rdvWithUsers = await Rdv.findByPk(rdv.id, {
-      include: [
-        { model: User, as: 'rdvPatient', attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto'] },
-        { model: User, as: 'rdvDoctor', attributes: ['idUser', 'lastName', 'firstName', 'profilePhoto'] },
-        { model: Doctor, as: 'rdvDoctorProfile', attributes: ['id'] },
-        { model: Consultation, as: 'rdvConsultation' }
-      ]
+    // Prépare la transaction CinetPay
+    const transactionId = `rdv_${rdv.id}_${Date.now()}`;
+    const cinetpayPayload = {
+      apikey: process.env.CINETPAY_API_KEY,
+      site_id: process.env.CINETPAY_SITE_ID,
+      transaction_id: transactionId,
+      amount: shares.totalToPay,
+      currency: 'XAF',
+      description: `Paiement RDV Meditime #${rdv.id}`,
+      return_url: process.env.CINETPAY_RETURN_URL,
+      notify_url: process.env.CINETPAY_NOTIFY_URL,
+      customer_name: req.user?.firstName || 'Patient',
+      customer_surname: req.user?.lastName || '',
+      customer_email: req.user?.email || '',
+      customer_phone_number: req.user?.phone || '',
+      channels: 'ALL',
+    };
+
+    // Appel API CinetPay
+    const cinetpayRes = await axios.post('https://api-checkout.cinetpay.com/v2/payment', cinetpayPayload);
+    const paymentUrl = cinetpayRes.data.data.payment_url;
+
+    // Enregistre le paiement en BDD
+    await Payment.create({
+      rdv_id: rdv.id,
+      patient_id,
+      doctor_id,
+      amount: shares.totalToPay,
+      platform_fee: shares.platformFee,
+      doctor_amount: shares.doctorAmount,
+      status: 'pending',
+      cinetpay_transaction_id: transactionId,
+      payment_method: 'cinetpay'
     });
 
-    // ⚡️ Envoie la réponse tout de suite
-    res.status(201).json(rdvToJson(rdvWithUsers, req));
+    // Retourne l'URL de paiement ET le RDV complet au front
+    res.status(201).json({
+      paymentUrl,
+      rdv: rdvToJson(rdv, req)
+    });
 
     // ⏳ Notification en arrière-plan, ne bloque pas la réponse
     notifyRdvStatus(req.app, rdv, null).catch(console.error);
   } catch (error) {
+    console.error('Erreur CinetPay:', error.response?.data || error.message);
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 };
@@ -430,6 +471,27 @@ const cancelRdv = async (req, res) => {
 
     // Notification en arrière-plan, ne bloque pas la réponse
     notifyRdvStatus(req.app, rdv, rdv.status, req.user.idUser).catch(console.error);
+
+    // Cherche le paiement lié
+    const payment = await Payment.findOne({ where: { rdv_id: rdv.id, status: 'success' } });
+    if (payment) {
+      // Appelle l'API CinetPay pour rembourser (si tu veux automatiser)
+      try {
+        await axios.post('https://api-checkout.cinetpay.com/v2/refund', {
+          apikey: process.env.CINETPAY_API_KEY,
+          site_id: process.env.CINETPAY_SITE_ID,
+          transaction_id: payment.cinetpay_transaction_id,
+          amount: payment.amount,
+          reason: 'RDV annulé ou refusé'
+        });
+        payment.status = 'refunded';
+        payment.refunded_at = new Date();
+        await payment.save();
+      } catch (e) {
+        // Log l'erreur mais ne bloque pas l'annulation/refus
+        console.error('Erreur remboursement CinetPay:', e.message);
+      }
+    }
   } catch (error) {
     res.status(500).json({ message: 'Erreur serveur' });
   }
@@ -567,7 +629,8 @@ module.exports = {
   getAvailableSlots,
   acceptRdv,
   refuseRdv,
-  cancelRdv, // <-- Ajoute ici
+  cancelRdv,
   hasRdvBetweenPatientAndDoctor,
-  markPresence, // Ajoute cette ligne
+  markPresence,
+  rdvToJson // <-- ajoute ceci
 };

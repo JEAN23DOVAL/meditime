@@ -37,6 +37,8 @@ const doctorReviewRoutes = require('./routes/doctorReview.routes');
 app.use('/api/doctor-reviews', doctorReviewRoutes);
 const consultationRoutes = require('./routes/consultation.routes');
 app.use('/api/consultations', consultationRoutes);
+const paymentRoutes = require('./routes/payment.routes');
+app.use('/api/payments', paymentRoutes);
 
 // 🧱 Middleware global de gestion d'erreurs
 app.use((err, req, res, next) => {
