@@ -11,7 +11,7 @@ class ApiConstants {
   /// Appelle cette méthode au démarrage de l'app (ex: dans main())
   static Future<void> initBaseUrl() async {
     if (kIsWeb) {
-      _baseUrl = "http://localhost:3000/api";
+      _baseUrl = "https://acceptable-gratitude.up.railway.app/api";
       return;
     }
     if (Platform.isAndroid) {
@@ -20,10 +20,10 @@ class ApiConstants {
       _isPhysicalAndroid = androidInfo.isPhysicalDevice ?? false; // Ajoute cette ligne
       if (_isPhysicalAndroid == true) {
         // Téléphone réel Android
-        _baseUrl = "http://10.197.212.230:3000/api"; // <-- Mets ici l'IP de ton PC
+        _baseUrl = "https://acceptable-gratitude.up.railway.app/api"; // <-- Mets ici l'IP de ton PC
       } else {
         // Émulateur Android
-        _baseUrl = "http://10.0.2.2:3000/api";
+        _baseUrl = "https://acceptable-gratitude.up.railway.app/api";
       }
       return;
     }
@@ -31,13 +31,13 @@ class ApiConstants {
       final deviceInfo = DeviceInfoPlugin();
       final iosInfo = await deviceInfo.iosInfo;
       if (iosInfo.isPhysicalDevice ?? false) {
-        _baseUrl = "http://10.197.212.230:3000/api"; // <-- Mets ici l'IP de ton PC
+        _baseUrl = "https://acceptable-gratitude.up.railway.app/api"; // <-- Mets ici l'IP de ton PC
       } else {
-        _baseUrl = "http://localhost:3000/api";
+        _baseUrl = "https://acceptable-gratitude.up.railway.app/api";
       }
       return;
     }
-    _baseUrl = "http://10.197.212.230:3000/api";
+    _baseUrl = "https://acceptable-gratitude.up.railway.app/api";
   }
 
   static String get baseUrl {
@@ -123,19 +123,19 @@ class ApiConstants {
 
   /// Base URL pour les fichiers uploadés (images, PDF, etc.)
   static String get uploadBaseUrl {
-    if (kIsWeb) return "http://localhost:3000/uploads";
+    if (kIsWeb) return "https://acceptable-gratitude.up.railway.app/uploads";
     if (Platform.isAndroid) {
       // Même logique que pour _baseUrl
       final deviceInfo = DeviceInfoPlugin();
       // ATTENTION : DeviceInfoPlugin().androidInfo est async, donc il faut stocker le résultat au démarrage
       // Pour rester synchrone ici, on va utiliser une variable statique initialisée dans initBaseUrl()
       if (_isPhysicalAndroid == true) {
-        return "http://10.197.212.230:3000/uploads"; // <-- Mets ici l'IP de ton PC
+        return "https://acceptable-gratitude.up.railway.app/uploads"; // <-- Mets ici l'IP de ton PC
       }
-      return "http://10.0.2.2:3000/uploads";
+      return "https://acceptable-gratitude.up.railway.app/uploads";
     }
-    if (Platform.isIOS) return "http://localhost:3000/uploads";
-    return "http://10.197.212.230:3000/uploads";
+    if (Platform.isIOS) return "https://acceptable-gratitude.up.railway.app/uploads";
+    return "https://acceptable-gratitude.up.railway.app/uploads";
   }
 
   /// Génère une URL d'upload pour un chemin donné.
