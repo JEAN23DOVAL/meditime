@@ -11,7 +11,7 @@ class ApiConstants {
   /// Appelle cette méthode au démarrage de l'app (ex: dans main())
   static Future<void> initBaseUrl() async {
     if (kIsWeb) {
-      _baseUrl = "https://humble-nature-production-d983.up.railway.app/api";
+      _baseUrl = "https://meditime.up.railway.app/api";
       return;
     }
     if (Platform.isAndroid) {
@@ -20,10 +20,10 @@ class ApiConstants {
       _isPhysicalAndroid = androidInfo.isPhysicalDevice ?? false; // Ajoute cette ligne
       if (_isPhysicalAndroid == true) {
         // Téléphone réel Android
-        _baseUrl = "https://humble-nature-production-d983.up.railway.app/api"; // <-- Mets ici l'IP de ton PC
+        _baseUrl = "https://meditime.up.railway.app/api"; // <-- Mets ici l'IP de ton PC
       } else {
         // Émulateur Android
-        _baseUrl = "https://humble-nature-production-d983.up.railway.app/api";
+        _baseUrl = "https://meditime.up.railway.app/api";
       }
       return;
     }
@@ -31,13 +31,13 @@ class ApiConstants {
       final deviceInfo = DeviceInfoPlugin();
       final iosInfo = await deviceInfo.iosInfo;
       if (iosInfo.isPhysicalDevice ?? false) {
-        _baseUrl = "https://humble-nature-production-d983.up.railway.app/api"; // <-- Mets ici l'IP de ton PC
+        _baseUrl = "https://meditime.up.railway.app/api"; // <-- Mets ici l'IP de ton PC
       } else {
-        _baseUrl = "https://humble-nature-production-d983.up.railway.app/api";
+        _baseUrl = "https://meditime.up.railway.app/api";
       }
       return;
     }
-    _baseUrl = "https://humble-nature-production-d983.up.railway.app/api";
+    _baseUrl = "https://meditime.up.railway.app/api";
   }
 
   static String get baseUrl {
@@ -123,19 +123,17 @@ class ApiConstants {
 
   /// Base URL pour les fichiers uploadés (images, PDF, etc.)
   static String get uploadBaseUrl {
-    if (kIsWeb) return "https://humble-nature-production-d983.up.railway.app/uploads";
+    if (kIsWeb) return "https://meditime.up.railway.app/uploads";
     if (Platform.isAndroid) {
       // Même logique que pour _baseUrl
       final deviceInfo = DeviceInfoPlugin();
-      // ATTENTION : DeviceInfoPlugin().androidInfo est async, donc il faut stocker le résultat au démarrage
-      // Pour rester synchrone ici, on va utiliser une variable statique initialisée dans initBaseUrl()
       if (_isPhysicalAndroid == true) {
-        return "https://humble-nature-production-d983.up.railway.app/uploads"; // <-- Mets ici l'IP de ton PC
+        return "https://meditime.up.railway.app/uploads"; // <-- Mets ici l'IP de ton PC
       }
-      return "https://humble-nature-production-d983.up.railway.app/uploads";
+      return "https://meditime.up.railway.app/uploads";
     }
-    if (Platform.isIOS) return "https://humble-nature-production-d983.up.railway.app/uploads";
-    return "https://humble-nature-production-d983.up.railway.app/uploads";
+    if (Platform.isIOS) return "https://meditime.up.railway.app/uploads";
+    return "https://meditime.up.railway.app/uploads";
   }
 
   /// Génère une URL d'upload pour un chemin donné.
@@ -151,7 +149,6 @@ class ApiConstants {
     if (path.startsWith('/uploads')) {
       return "${uploadBaseUrl}${path.substring('/uploads'.length)}";
     }
-    // Pour les anciens chemins relatifs ou juste le nom du fichier
     return "$uploadBaseUrl/$path";
   }
 

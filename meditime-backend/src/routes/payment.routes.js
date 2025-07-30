@@ -9,7 +9,7 @@ router.post('/cinetpay-callback', paymentController.cinetpayCallback);
 router.post('/initiate', paymentController.initiatePayment);
 
 // --- Route de simulation locale ---
-if (process.env.NODE_ENV !== 'production') {
+
   router.post('/simulate-success', async (req, res) => {
     const { transaction_id } = req.body;
     if (!transaction_id) return res.status(400).json({ message: 'transaction_id requis' });
@@ -18,6 +18,5 @@ if (process.env.NODE_ENV !== 'production') {
     const { cinetpayCallback } = require('../controllers/payment.controller');
     await cinetpayCallback(req, res);
   });
-}
 
 module.exports = router;
