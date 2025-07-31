@@ -17,8 +17,9 @@ import 'package:url_launcher/url_launcher.dart';
 class RdvBottomSheetContent extends ConsumerStatefulWidget {
   final Doctor? selectedDoctor;
   final Rdv? initialRdv;
+  final VoidCallback? onPaymentSuccess; // Ajoute ce paramètre
 
-  const RdvBottomSheetContent({super.key, this.selectedDoctor, this.initialRdv});
+  const RdvBottomSheetContent({super.key, this.selectedDoctor, this.initialRdv, this.onPaymentSuccess});
 
   @override
   ConsumerState<RdvBottomSheetContent> createState() => _RdvBottomSheetContentState();

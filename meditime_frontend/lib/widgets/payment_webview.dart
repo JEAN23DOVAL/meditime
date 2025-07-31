@@ -35,7 +35,7 @@ class _PaymentWebViewState extends State<PaymentWebView> {
   void _goToRdvPage() {
     if (!_isClosed && mounted) {
       _isClosed = true;
-      context.go('/rdv_page'); // ou AppRoutes.rdvPage si tu utilises la constante
+      Navigator.of(context).pop();
     }
   }
 
