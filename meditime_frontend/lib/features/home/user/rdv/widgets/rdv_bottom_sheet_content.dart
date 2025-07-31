@@ -10,6 +10,7 @@ import 'package:meditime_frontend/models/rdv_model.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
 import 'package:intl/intl.dart';
 import 'package:meditime_frontend/providers/rdv_provider.dart';
+import 'package:meditime_frontend/widgets/payment_webview.dart';
 
 class RdvBottomSheetContent extends ConsumerStatefulWidget {
   final Doctor? selectedDoctor;
@@ -238,14 +239,7 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             onPressed: () async {
-                              // Ouvre la page de recherche de médecins et attends le résultat
-                              final doctor = await Navigator.of(context, rootNavigator: true).pushNamed(
-                                '/doctors/nearby',
-                                arguments: {
-                                  'patientCity': user?.city,
-                                  'excludeDoctorId': user?.role == 'doctor' ? user?.doctorId : null,
-                                },
-                              );
+                              final doctor = await context.push('/doctors/nearby');
                               if (doctor != null && doctor is Doctor) {
                                 setState(() => selectedDoctor = doctor);
                               }
@@ -392,12 +386,22 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                                 Navigator.of(context, rootNavigator: true).pop(); // Ferme le loader
                                 await Future.delayed(const Duration(milliseconds: 100));
 
-                                // Passe les infos nécessaires à la page principale via pop
+                                // Ouvre la WebView directement depuis le bottom sheet
                                 if (context.mounted) {
-                                  Navigator.of(context).pop({
-                                    'paymentUrl': paymentUrl,
-                                    'transactionId': transactionId,
-                                  });
+                                  await Navigator.of(context, rootNavigator: true).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => PaymentWebView(
+                                        url: paymentUrl,
+                                        transactionId: transactionId,
+                                        onPaymentSuccess: () {
+                                          // Ferme le bottom sheet et rafraîchis les providers
+                                          if (context.mounted) {
+                                            Navigator.of(context).pop(true); // Ferme le bottom sheet
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  );
                                 }
                               }
                             } catch (e) {

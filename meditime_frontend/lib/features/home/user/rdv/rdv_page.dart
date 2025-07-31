@@ -159,19 +159,8 @@ class RdvPage extends ConsumerWidget {
                 child: RdvBottomSheetContent(),
               ),
             );
-            if (result != null && result['paymentUrl'] != null && result['transactionId'] != null) {
-              if (context.mounted) {
-                await context.push(
-                  '/payment_webview',
-                  extra: {
-                    'url': result['paymentUrl'],
-                    'transactionId': result['transactionId'],
-                    'onPaymentSuccess': () {
-                      _refreshAllProviders(ref);
-                    },
-                  },
-                );
-              }
+            if (result == true) {
+              _refreshAllProviders(ref);
             }
           },
           backgroundColor: AppColors.primary,

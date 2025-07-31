@@ -6,6 +6,7 @@ import 'package:meditime_frontend/configs/app_routes.dart';
 import 'package:meditime_frontend/features/home/user/doctors/widgets/doctor_filters_row.dart';
 import 'package:meditime_frontend/features/home/user/doctors/widgets/doctor_list.dart';
 import 'package:meditime_frontend/features/home/user/doctors/widgets/doctor_search.dart';
+import 'package:meditime_frontend/features/home/user/rdv/widgets/rdv_bottom_sheet_content.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
 import 'package:meditime_frontend/providers/doctor_provider.dart';
 
@@ -58,8 +59,19 @@ class _DoctorPageState extends ConsumerState<DoctorPage> {
               error: (e, _) => Center(child: Text('Erreur: $e')),
               data: (doctors) => DoctorList(
                 doctors: doctors,
-                onBook: (doctor) {
-                  Navigator.of(context).pop(doctor); // Retourne le médecin sélectionné
+                onBook: (doctor) async {
+                  await showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    builder: (context) => FractionallySizedBox(
+                      heightFactor: 0.85,
+                      child: RdvBottomSheetContent(selectedDoctor: doctor),
+                    ),
+                  );
                 },
                 onTap: (doctor) {
                   context.go('${AppRoutes.doctorDetail}/${doctor.idUser}');
