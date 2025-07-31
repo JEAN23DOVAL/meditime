@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:meditime_frontend/features/home/user/providers/user_message_provider.dart';
 import 'package:meditime_frontend/features/home/user/rdv/widgets/rdv_bottom_sheet_content.dart';
 import 'package:meditime_frontend/providers/rdv_badge_provider.dart';
+import 'package:meditime_frontend/providers/rdv_provider.dart';
 import 'widgets/rdv_status_tabs.dart';
 import 'package:meditime_frontend/configs/app_colors.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
@@ -72,8 +75,8 @@ class RdvPage extends ConsumerWidget {
             ],
           ),
           floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              showModalBottomSheet(
+            onPressed: () async {
+              final result = await showModalBottomSheet<Map<String, dynamic>>(
                 context: context,
                 isScrollControlled: true,
                 backgroundColor: Colors.white,
@@ -90,6 +93,22 @@ class RdvPage extends ConsumerWidget {
                   ),
                 ),
               );
+              // Si le bottom sheet retourne un paiement à faire, ouvre la WebView
+              if (result != null && result['paymentUrl'] != null && result['transactionId'] != null) {
+                if (context.mounted) {
+                  await context.push(
+                    '/payment_webview',
+                    extra: {
+                      'url': result['paymentUrl'],
+                      'transactionId': result['transactionId'],
+                      'onPaymentSuccess': () {
+                        // Rafraîchit tous les providers concernés ici (voir étape 4)
+                        _refreshAllProviders(ref);
+                      },
+                    },
+                  );
+                }
+              }
             },
             backgroundColor: AppColors.primary,
             child: const Icon(Icons.add, color: Colors.white),
@@ -134,8 +153,8 @@ class RdvPage extends ConsumerWidget {
           ],
         ),
         floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            showModalBottomSheet(
+          onPressed: () async {
+            final result = await showModalBottomSheet<Map<String, dynamic>>(
               context: context,
               isScrollControlled: true,
               backgroundColor: Colors.white,
@@ -152,6 +171,22 @@ class RdvPage extends ConsumerWidget {
                 ),
               ),
             );
+            // Si le bottom sheet retourne un paiement à faire, ouvre la WebView
+            if (result != null && result['paymentUrl'] != null && result['transactionId'] != null) {
+              if (context.mounted) {
+                await context.push(
+                  '/payment_webview',
+                  extra: {
+                    'url': result['paymentUrl'],
+                    'transactionId': result['transactionId'],
+                    'onPaymentSuccess': () {
+                      // Rafraîchit tous les providers concernés ici (voir étape 4)
+                      _refreshAllProviders(ref);
+                    },
+                  },
+                );
+              }
+            }
           },
           backgroundColor: AppColors.primary,
           child: const Icon(Icons.add, color: Colors.white),
@@ -208,4 +243,29 @@ class _DoctorRdvTab extends StatelessWidget {
       ),
     );
   }
+}
+
+void _refreshAllProviders(WidgetRef ref) {
+  // RDV
+  ref.invalidate(rdvListProvider);
+  ref.invalidate(nextPatientRdvProvider);
+  ref.invalidate(nextDoctorRdvProvider);
+  ref.invalidate(rdvDetailsProvider);
+
+  // Badge RDV
+  ref.invalidate(rdvBadgeProvider);
+
+  // Auth
+  ref.invalidate(authProvider);
+
+  // Messages
+  ref.invalidate(userMessagesProvider('all'));
+  ref.invalidate(userMessagesProvider('doctor'));
+  ref.invalidate(userMessagesProvider('admin'));
+
+  // Détail médecin (si besoin)
+  // Si tu as l'id du médecin, fais : ref.invalidate(doctorDetailProvider(idUser));
+  // Sinon, tu peux invalider tous les providers doctor si besoin
+
+  // Ajoute ici tout autre provider lié à l'état RDV, utilisateur, etc.
 }

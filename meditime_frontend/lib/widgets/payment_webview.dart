@@ -35,7 +35,8 @@ class _PaymentWebViewState extends State<PaymentWebView> {
   void _goToRdvPage() {
     if (!_isClosed && mounted) {
       _isClosed = true;
-      Navigator.of(context).pop();
+      widget.onPaymentSuccess?.call(); // Rafraîchit les providers
+      Navigator.of(context).pop(); // Ferme la WebView
     }
   }
 

@@ -396,21 +396,15 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                                 Navigator.of(context, rootNavigator: true).pop(); // Ferme le bottom sheet
                                 await Future.delayed(const Duration(milliseconds: 100));
 
-                                if (paymentUrl != null) {
-                                  // Utilise le context de la page principale (celui du bottom sheet est encore valide ici)
-                                  if (context.mounted) {
-                                    context.push(
-                                      '/payment_webview',
-                                      extra: {
-                                        'url': paymentUrl,
-                                        'transactionId': transactionId,
-                                      },
-                                    );
-                                  }
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Erreur lors de la génération du paiement.')),
-                                  );
+                                // Passe les infos nécessaires à la page principale via Navigator.pop ou un callback
+                                if (context.mounted) {
+                                  // Utilise un callback ou un event pour notifier la page principale d’ouvrir la WebView
+                                  // Par exemple, tu peux utiliser showDialog ou un Provider pour transmettre l’intention
+                                  // Mais le plus simple : retourne les infos via pop
+                                  Navigator.of(context, rootNavigator: true).pop({
+                                    'paymentUrl': paymentUrl,
+                                    'transactionId': transactionId,
+                                  });
                                 }
                               }
                             } catch (e) {
