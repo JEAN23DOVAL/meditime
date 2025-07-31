@@ -2,11 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:meditime_frontend/core/constants/api_endpoints.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:go_router/go_router.dart';
-import 'package:meditime_frontend/configs/app_colors.dart';
-import 'package:meditime_frontend/configs/app_styles.dart';
 import 'package:dio/dio.dart';
-import 'package:meditime_frontend/configs/app_routes.dart';
+import 'package:meditime_frontend/configs/app_colors.dart';
 
 class PaymentWebView extends StatefulWidget {
   final String url;
@@ -35,8 +32,8 @@ class _PaymentWebViewState extends State<PaymentWebView> {
   void _goToRdvPage() {
     if (!_isClosed && mounted) {
       _isClosed = true;
-      widget.onPaymentSuccess?.call(); // Rafraîchit les providers
-      Navigator.of(context).pop(); // Ferme la WebView
+      widget.onPaymentSuccess?.call();
+      Navigator.of(context).pop();
     }
   }
 
@@ -52,14 +49,12 @@ class _PaymentWebViewState extends State<PaymentWebView> {
           onNavigationRequest: (nav) async {
             if (_isClosed) return NavigationDecision.prevent;
             if (nav.url.contains('success') || nav.url.contains('retour')) {
-              widget.onPaymentSuccess?.call();
-              await Future.delayed(const Duration(milliseconds: 200));
               _goToRdvPage();
               return NavigationDecision.prevent;
             }
             if (nav.url.contains('cancel')) {
               widget.onPaymentCancel?.call();
-              await Future.delayed(const Duration(milliseconds: 200));
+              await Future.delayed(const Duration(milliseconds: 150));
               _goToRdvPage();
               return NavigationDecision.prevent;
             }
@@ -69,17 +64,14 @@ class _PaymentWebViewState extends State<PaymentWebView> {
       )
       ..loadRequest(Uri.parse(widget.url));
 
-    // Timer pour fermer la WebView après 30 secondes et simuler le paiement
-    _autoCloseTimer = Timer(const Duration(seconds: 30), () async {
+    _autoCloseTimer = Timer(const Duration(seconds: 20), () async {
       if (!_isClosed) {
         await Dio().post(
           '${ApiConstants.baseUrl}/payments/simulate-success',
           data: {'transaction_id': widget.transactionId},
         );
         if (mounted) {
-          _isClosed = true;
           _goToRdvPage();
-          widget.onPaymentSuccess?.call();
         }
       }
     });

@@ -5,21 +5,17 @@ import 'package:meditime_frontend/configs/app_colors.dart';
 import 'package:meditime_frontend/configs/app_routes.dart';
 import 'package:meditime_frontend/features/home/user/rdv/pages/models/doctor_slot_model.dart';
 import 'package:meditime_frontend/features/home/user/rdv/pages/provider/creneau_provider.dart';
-import 'package:meditime_frontend/features/home/user/rdv/widgets/rdv_list.dart';
 import 'package:meditime_frontend/models/doctor_model.dart';
 import 'package:meditime_frontend/models/rdv_model.dart';
 import 'package:meditime_frontend/providers/AuthNotifier.dart';
 import 'package:intl/intl.dart';
 import 'package:meditime_frontend/providers/rdv_provider.dart';
-import 'package:meditime_frontend/widgets/payment_webview.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class RdvBottomSheetContent extends ConsumerStatefulWidget {
   final Doctor? selectedDoctor;
   final Rdv? initialRdv;
-  final VoidCallback? onPaymentSuccess; // Ajoute ce paramètre
 
-  const RdvBottomSheetContent({super.key, this.selectedDoctor, this.initialRdv, this.onPaymentSuccess});
+  const RdvBottomSheetContent({super.key, this.selectedDoctor, this.initialRdv});
 
   @override
   ConsumerState<RdvBottomSheetContent> createState() => _RdvBottomSheetContentState();
@@ -204,7 +200,8 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Le contenu scrollable
-              Expanded(
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.65,
                 child: SingleChildScrollView(
                   padding: EdgeInsets.only(bottom: 24 + MediaQuery.of(context).viewInsets.bottom),
                   child: Column(
@@ -242,9 +239,9 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                             ),
                             onPressed: () async {
                               // Ouvre la page de recherche de médecins et attends le résultat
-                              final doctor = await context.push(
+                              final doctor = await Navigator.of(context, rootNavigator: true).pushNamed(
                                 '/doctors/nearby',
-                                extra: {
+                                arguments: {
                                   'patientCity': user?.city,
                                   'excludeDoctorId': user?.role == 'doctor' ? user?.doctorId : null,
                                 },
@@ -279,9 +276,9 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                                   icon: const Icon(Icons.refresh, color: Colors.blueAccent),
                                   tooltip: "Changer",
                                   onPressed: () async {
-                                    final doctor = await context.push(
+                                    final doctor = await Navigator.of(context, rootNavigator: true).pushNamed(
                                       '/doctors/nearby',
-                                      extra: {
+                                      arguments: {
                                         'patientCity': user?.city,
                                         'excludeDoctorId': user?.role == 'doctor' ? user?.doctorId : null,
                                       },
@@ -330,9 +327,8 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                                   style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
                                 subtitle: Text(
-                                  'Pour réserver ce rendez-vous, vous devez payer au moins :\n'
-                                  '${platformFee.toString()} XAF (commission plateforme)\n'
-                                  'Prix total consultation : ${price.toString()} XAF',
+                                  '${platformFee.toString()} XAF de commission\n'
+                                  'Prix total : ${price.toString()} XAF',
                                   style: const TextStyle(fontSize: 15),
                                 ),
                               ),
@@ -393,15 +389,12 @@ class _RdvBottomSheetContentState extends ConsumerState<RdvBottomSheetContent> {
                                 final paymentUrl = result['paymentUrl'];
                                 final transactionId = result['transactionId'];
 
-                                Navigator.of(context, rootNavigator: true).pop(); // Ferme le bottom sheet
+                                Navigator.of(context, rootNavigator: true).pop(); // Ferme le loader
                                 await Future.delayed(const Duration(milliseconds: 100));
 
-                                // Passe les infos nécessaires à la page principale via Navigator.pop ou un callback
+                                // Passe les infos nécessaires à la page principale via pop
                                 if (context.mounted) {
-                                  // Utilise un callback ou un event pour notifier la page principale d’ouvrir la WebView
-                                  // Par exemple, tu peux utiliser showDialog ou un Provider pour transmettre l’intention
-                                  // Mais le plus simple : retourne les infos via pop
-                                  Navigator.of(context, rootNavigator: true).pop({
+                                  Navigator.of(context).pop({
                                     'paymentUrl': paymentUrl,
                                     'transactionId': transactionId,
                                   });

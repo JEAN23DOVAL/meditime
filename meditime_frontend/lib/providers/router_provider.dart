@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:meditime_frontend/features/RDV/pages/rdv_form_page.dart';
@@ -243,6 +245,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/doctors/nearby',
         builder: (context, state) => const DoctorPage(),
       ),
+      GoRoute(
+        path: '/payment_webview',
+        pageBuilder: (context, state) {
+          final url = (state.extra as Map)['url'] as String;
+          final transactionId = (state.extra as Map)['transactionId'] as String;
+          final onPaymentSuccess = (state.extra as Map)['onPaymentSuccess'] as VoidCallback?;
+          return buildFadeTransitionPage(
+            child: PaymentWebView(
+              url: url,
+              transactionId: transactionId,
+              onPaymentSuccess: onPaymentSuccess,
+            ),
+            key: state.pageKey,
+          );
+        },
+      ),
       // Ajoute cette nouvelle route
       GoRoute(
         path: AppRoutes.consultationDetails,
@@ -373,20 +391,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           child: const DocumentsPage(),
           key: state.pageKey,
         ),
-      ),
-      GoRoute(
-        path: '/payment_webview',
-        pageBuilder: (context, state) {
-          final url = (state.extra as Map)['url'] as String;
-          final transactionId = (state.extra as Map)['transactionId'] as String;
-          return buildFadeTransitionPage(
-            child: PaymentWebView(
-              url: url,
-              transactionId: transactionId,
-            ),
-            key: state.pageKey,
-          );
-        },
       ),
     ],
   );

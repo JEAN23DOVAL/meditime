@@ -76,6 +76,7 @@ class RdvPage extends ConsumerWidget {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () async {
+              // Ouvre le bottom sheet et récupère le résultat
               final result = await showModalBottomSheet<Map<String, dynamic>>(
                 context: context,
                 isScrollControlled: true,
@@ -83,14 +84,9 @@ class RdvPage extends ConsumerWidget {
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-                builder: (context) => Padding(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom,
-                  ),
-                  child: FractionallySizedBox(
-                    heightFactor: 0.85,
-                    child: RdvBottomSheetContent(),
-                  ),
+                builder: (context) => FractionallySizedBox(
+                  heightFactor: 0.85,
+                  child: RdvBottomSheetContent(),
                 ),
               );
               // Si le bottom sheet retourne un paiement à faire, ouvre la WebView
@@ -102,7 +98,6 @@ class RdvPage extends ConsumerWidget {
                       'url': result['paymentUrl'],
                       'transactionId': result['transactionId'],
                       'onPaymentSuccess': () {
-                        // Rafraîchit tous les providers concernés ici (voir étape 4)
                         _refreshAllProviders(ref);
                       },
                     },
@@ -138,17 +133,15 @@ class RdvPage extends ConsumerWidget {
         ),
         body: TabBarView(
           children: [
-            // Onglet 1 : le médecin est patient
             _DoctorRdvTab(
               type: _DoctorRdvTabType.asPatient,
               userId: user.idUser,
-              doctorId: null, // <-- Correction ici !
+              doctorId: null,
             ),
-            // Onglet 2 : le médecin est médecin
             _DoctorRdvTab(
               type: _DoctorRdvTabType.asDoctor,
               userId: user.idUser,
-              doctorId: user.idUser, // <-- CORRECTION : passe user.idUser ici !
+              doctorId: user.idUser,
             ),
           ],
         ),
@@ -161,17 +154,11 @@ class RdvPage extends ConsumerWidget {
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              builder: (context) => Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                ),
-                child: FractionallySizedBox(
-                  heightFactor: 0.85,
-                  child: RdvBottomSheetContent(),
-                ),
+              builder: (context) => FractionallySizedBox(
+                heightFactor: 0.85,
+                child: RdvBottomSheetContent(),
               ),
             );
-            // Si le bottom sheet retourne un paiement à faire, ouvre la WebView
             if (result != null && result['paymentUrl'] != null && result['transactionId'] != null) {
               if (context.mounted) {
                 await context.push(
@@ -180,7 +167,6 @@ class RdvPage extends ConsumerWidget {
                     'url': result['paymentUrl'],
                     'transactionId': result['transactionId'],
                     'onPaymentSuccess': () {
-                      // Rafraîchit tous les providers concernés ici (voir étape 4)
                       _refreshAllProviders(ref);
                     },
                   },
@@ -201,7 +187,7 @@ enum _DoctorRdvTabType { asPatient, asDoctor }
 class _DoctorRdvTab extends StatelessWidget {
   final _DoctorRdvTabType type;
   final int userId;
-  final int? doctorId; // <-- change ici : int? au lieu de int
+  final int? doctorId;
   const _DoctorRdvTab({
     required this.type,
     required this.userId,
@@ -246,26 +232,14 @@ class _DoctorRdvTab extends StatelessWidget {
 }
 
 void _refreshAllProviders(WidgetRef ref) {
-  // RDV
   ref.invalidate(rdvListProvider);
   ref.invalidate(nextPatientRdvProvider);
   ref.invalidate(nextDoctorRdvProvider);
   ref.invalidate(rdvDetailsProvider);
-
-  // Badge RDV
   ref.invalidate(rdvBadgeProvider);
-
-  // Auth
   ref.invalidate(authProvider);
-
-  // Messages
   ref.invalidate(userMessagesProvider('all'));
   ref.invalidate(userMessagesProvider('doctor'));
   ref.invalidate(userMessagesProvider('admin'));
-
-  // Détail médecin (si besoin)
-  // Si tu as l'id du médecin, fais : ref.invalidate(doctorDetailProvider(idUser));
-  // Sinon, tu peux invalider tous les providers doctor si besoin
-
-  // Ajoute ici tout autre provider lié à l'état RDV, utilisateur, etc.
+  // Ajoute ici d'autres providers si besoin
 }

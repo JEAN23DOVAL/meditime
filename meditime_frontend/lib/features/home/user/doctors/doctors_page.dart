@@ -59,7 +59,7 @@ class _DoctorPageState extends ConsumerState<DoctorPage> {
               data: (doctors) => DoctorList(
                 doctors: doctors,
                 onBook: (doctor) {
-                  Navigator.pop(context, doctor);
+                  Navigator.of(context).pop(doctor); // Retourne le médecin sélectionné
                 },
                 onTap: (doctor) {
                   context.go('${AppRoutes.doctorDetail}/${doctor.idUser}');
